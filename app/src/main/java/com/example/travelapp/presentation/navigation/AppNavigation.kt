@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.navigation
 
+import com.example.travelapp.data.repository.impl.FakeParticipantRepository
+import com.example.travelapp.presentation.participants.ParticipantsViewModel
 import com.example.travelapp.data.repository.impl.FakeExpenseRepository
 import com.example.travelapp.presentation.budget.BudgetViewModel
 import com.example.travelapp.data.repository.impl.FakeRouteRepository
@@ -47,6 +49,7 @@ fun AppNavigation() {
     val tripRepository = remember { FakeTripRepository() }
     val routeRepository = remember { FakeRouteRepository() }
     val expenseRepository = remember { FakeExpenseRepository() }
+    val participantRepository = remember { FakeParticipantRepository() }
 
     NavHost(
         navController = navController,
@@ -190,11 +193,26 @@ fun AppNavigation() {
             val budgetUiState by budgetViewModel.uiState.collectAsState()
 
             /**
-             * Загружаем точки маршрута выбранной поездки.
+             * ViewModel участников.
+             */
+            val participantsViewModel: ParticipantsViewModel = viewModel(
+                factory = ViewModelFactory {
+                    ParticipantsViewModel(participantRepository)
+                }
+            )
+
+            val participantsUiState by participantsViewModel.uiState.collectAsState()
+
+            /**
+             * Загружаем данные для выбранной поездки.
+             *
+             * LaunchedEffect(tripId) выполнится при открытии экрана
+             * и при изменении id поездки.
              */
             LaunchedEffect(tripId) {
                 routeViewModel.loadRoutePoints(tripId)
                 budgetViewModel.loadExpenses(tripId)
+                participantsViewModel.loadParticipants(tripId)
             }
 
             TripScreen(
@@ -228,6 +246,13 @@ fun AppNavigation() {
                         tripId = tripId,
                         expenseId = expenseId
                     )
+                },
+
+                participantsUiState = participantsUiState,
+                onParticipantEmailChange = participantsViewModel::updateEmail,
+                onParticipantRoleChange = participantsViewModel::updateRole,
+                onInviteParticipantClick = {
+                    participantsViewModel.inviteParticipant(tripId)
                 }
             )
         }

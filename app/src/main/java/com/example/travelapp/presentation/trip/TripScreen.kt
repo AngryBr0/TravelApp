@@ -13,6 +13,7 @@ import com.example.travelapp.presentation.budget.BudgetTab
 import com.example.travelapp.presentation.budget.BudgetUiState
 import com.example.travelapp.presentation.map.MapTab
 import com.example.travelapp.presentation.participants.ParticipantsTab
+import com.example.travelapp.presentation.participants.ParticipantsUiState
 import com.example.travelapp.presentation.route.RouteTab
 import com.example.travelapp.presentation.route.RouteUiState
 
@@ -46,7 +47,12 @@ fun TripScreen(
     onBudgetCategoryChange: (String) -> Unit,
     onBudgetAmountChange: (String) -> Unit,
     onAddExpenseClick: () -> Unit,
-    onDeleteExpenseClick: (String) -> Unit
+    onDeleteExpenseClick: (String) -> Unit,
+
+    participantsUiState: ParticipantsUiState,
+    onParticipantEmailChange: (String) -> Unit,
+    onParticipantRoleChange: (String) -> Unit,
+    onInviteParticipantClick: () -> Unit
 ) {
     val selectedTabIndex = remember { mutableIntStateOf(0) }
 
@@ -101,7 +107,13 @@ fun TripScreen(
                 onDeleteExpenseClick = onDeleteExpenseClick
             )
 
-            3 -> ParticipantsTab(tripId = tripId)
+            3 -> ParticipantsTab(
+                tripId = tripId,
+                uiState = participantsUiState,
+                onEmailChange = onParticipantEmailChange,
+                onRoleChange = onParticipantRoleChange,
+                onInviteClick = onInviteParticipantClick
+            )
         }
     }
 }
