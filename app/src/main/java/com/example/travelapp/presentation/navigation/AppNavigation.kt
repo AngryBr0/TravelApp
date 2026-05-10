@@ -1,6 +1,7 @@
 package com.example.travelapp.presentation.navigation
 
-
+import com.example.travelapp.data.repository.impl.FakeExpenseRepository
+import com.example.travelapp.presentation.budget.BudgetViewModel
 import com.example.travelapp.data.repository.impl.FakeRouteRepository
 import com.example.travelapp.presentation.route.RouteViewModel
 import androidx.compose.runtime.Composable
@@ -45,6 +46,7 @@ fun AppNavigation() {
     val authRepository = remember { FakeAuthRepository() }
     val tripRepository = remember { FakeTripRepository() }
     val routeRepository = remember { FakeRouteRepository() }
+    val expenseRepository = remember { FakeExpenseRepository() }
 
     NavHost(
         navController = navController,
@@ -163,10 +165,7 @@ fun AppNavigation() {
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
 
             /**
-             * RouteViewModel создается для экрана поездки.
-             *
-             * Она отвечает за вкладку маршрута:
-             * добавление, отображение и удаление точек маршрута.
+             * ViewModel маршрута.
              */
             val routeViewModel: RouteViewModel = viewModel(
                 factory = ViewModelFactory {
@@ -177,13 +176,25 @@ fun AppNavigation() {
             val routeUiState by routeViewModel.uiState.collectAsState()
 
             /**
+             * ViewModel бюджета.
+             */
+            val budgetViewModel: BudgetViewModel = viewModel(
+                factory = ViewModelFactory {
+                    BudgetViewModel(
+                        authRepository = authRepository,
+                        expenseRepository = expenseRepository
+                    )
+                }
+            )
+
+            val budgetUiState by budgetViewModel.uiState.collectAsState()
+
+            /**
              * Загружаем точки маршрута выбранной поездки.
-             *
-             * LaunchedEffect(tripId) выполнится при открытии экрана
-             * и при изменении id поездки.
              */
             LaunchedEffect(tripId) {
                 routeViewModel.loadRoutePoints(tripId)
+                budgetViewModel.loadExpenses(tripId)
             }
 
             TripScreen(
@@ -202,6 +213,20 @@ fun AppNavigation() {
                     routeViewModel.deleteRoutePoint(
                         tripId = tripId,
                         pointId = pointId
+                    )
+                },
+
+                budgetUiState = budgetUiState,
+                onBudgetTitleChange = budgetViewModel::updateTitle,
+                onBudgetCategoryChange = budgetViewModel::updateCategory,
+                onBudgetAmountChange = budgetViewModel::updateAmount,
+                onAddExpenseClick = {
+                    budgetViewModel.addExpense(tripId)
+                },
+                onDeleteExpenseClick = { expenseId ->
+                    budgetViewModel.deleteExpense(
+                        tripId = tripId,
+                        expenseId = expenseId
                     )
                 }
             )

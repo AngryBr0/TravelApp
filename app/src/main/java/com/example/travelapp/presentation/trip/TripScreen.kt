@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.example.travelapp.presentation.budget.BudgetTab
+import com.example.travelapp.presentation.budget.BudgetUiState
 import com.example.travelapp.presentation.map.MapTab
 import com.example.travelapp.presentation.participants.ParticipantsTab
 import com.example.travelapp.presentation.route.RouteTab
@@ -18,14 +19,14 @@ import com.example.travelapp.presentation.route.RouteUiState
 /**
  * TripScreen — экран конкретной поездки.
  *
- * Здесь находятся вкладки:
+ * Экран объединяет основные разделы работы с поездкой:
  * - маршрут;
- * - карта;
+ * - карту;
  * - бюджет;
- * - участники.
+ * - участников.
  *
- * Сам экран не содержит бизнес-логику.
- * Он только передает данные во вкладки и вызывает callbacks.
+ * Сам TripScreen не хранит бизнес-логику.
+ * Он получает состояние и обработчики событий из ViewModel.
  */
 @Composable
 fun TripScreen(
@@ -38,7 +39,14 @@ fun TripScreen(
     onRouteLatitudeChange: (String) -> Unit,
     onRouteLongitudeChange: (String) -> Unit,
     onAddRoutePointClick: () -> Unit,
-    onDeleteRoutePointClick: (String) -> Unit
+    onDeleteRoutePointClick: (String) -> Unit,
+
+    budgetUiState: BudgetUiState,
+    onBudgetTitleChange: (String) -> Unit,
+    onBudgetCategoryChange: (String) -> Unit,
+    onBudgetAmountChange: (String) -> Unit,
+    onAddExpenseClick: () -> Unit,
+    onDeleteExpenseClick: (String) -> Unit
 ) {
     val selectedTabIndex = remember { mutableIntStateOf(0) }
 
@@ -83,7 +91,15 @@ fun TripScreen(
 
             1 -> MapTab(tripId = tripId)
 
-            2 -> BudgetTab(tripId = tripId)
+            2 -> BudgetTab(
+                tripId = tripId,
+                uiState = budgetUiState,
+                onTitleChange = onBudgetTitleChange,
+                onCategoryChange = onBudgetCategoryChange,
+                onAmountChange = onBudgetAmountChange,
+                onAddExpenseClick = onAddExpenseClick,
+                onDeleteExpenseClick = onDeleteExpenseClick
+            )
 
             3 -> ParticipantsTab(tripId = tripId)
         }
