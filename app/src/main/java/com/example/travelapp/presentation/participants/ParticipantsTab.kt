@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.participants
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -122,5 +124,29 @@ private fun ParticipantCard(
 
             Text(text = "Статус: ${participant.status}")
         }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+private fun ParticipantsTabPreview() {
+    TravelAppTheme {
+        ParticipantsTab(
+            tripId = "trip-1",
+            uiState = ParticipantsUiState(
+                participants = listOf(
+                    TripParticipant(
+                        id = "1",
+                        email = "editor@example.com"
+                    ),
+                    TripParticipant(
+                        id = "2",
+                        email = "viewer@example.com"
+                    )
+                )
+            ),
+            onEmailChange = {},
+            onRoleChange = {},
+            onInviteClick = {}
+        )
     }
 }

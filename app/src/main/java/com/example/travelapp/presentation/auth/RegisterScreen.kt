@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Экран регистрации.
  */
+
 @Composable
 fun RegisterScreen(
     uiState: AuthUiState,

@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.budget
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -150,5 +152,34 @@ private fun ExpenseCard(
                 Text("Удалить")
             }
         }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+private fun BudgetTabPreview() {
+    TravelAppTheme {
+        BudgetTab(
+            tripId = "trip-1",
+            uiState = BudgetUiState(
+                totalAmount = 6200.0,
+                expenses = listOf(
+                    Expense(
+                        id = "1",
+                        title = "Отель",
+                        amount = 5000.0
+                    ),
+                    Expense(
+                        id = "2",
+                        title = "Такси",
+                        amount = 1200.0
+                    )
+                )
+            ),
+            onTitleChange = {},
+            onCategoryChange = {},
+            onAmountChange = {},
+            onAddExpenseClick = {},
+            onDeleteExpenseClick = {}
+        )
     }
 }

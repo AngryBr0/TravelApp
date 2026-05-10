@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.auth
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +42,6 @@ fun LoginScreen(
             onLoginSuccess()
         }
     }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -94,5 +95,22 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    TravelAppTheme {
+        LoginScreen(
+            uiState = AuthUiState(
+                email = "test@example.com",
+                password = "123456"
+            ),
+            onEmailChange = {},
+            onPasswordChange = {},
+            onLoginClick = {},
+            onRegisterClick = {},
+            onLoginSuccess = {}
+        )
     }
 }

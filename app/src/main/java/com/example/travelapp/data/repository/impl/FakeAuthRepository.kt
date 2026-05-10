@@ -93,4 +93,14 @@ class FakeAuthRepository : AuthRepository {
     override fun getCurrentUserId(): String? {
         return currentUser?.id
     }
+    /**
+     * Возвращает текущего пользователя.
+     *
+     * Пока пользователь хранится просто в памяти приложения.
+     * В Firebase-версии данные будут браться из FirebaseAuth
+     * и, при необходимости, из коллекции users в Firestore.
+     */
+    override fun getCurrentUser(): User? {
+        return currentUser
+    }
 }

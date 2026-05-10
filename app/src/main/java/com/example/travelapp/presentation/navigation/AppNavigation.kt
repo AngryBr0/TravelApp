@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.navigation
 
+import com.example.travelapp.presentation.profile.ProfileScreen
+import com.example.travelapp.presentation.profile.ProfileViewModel
 import com.example.travelapp.data.repository.impl.FakeNotificationRepository
 import com.example.travelapp.presentation.notifications.NotificationsScreen
 import com.example.travelapp.presentation.notifications.NotificationsViewModel
@@ -138,6 +140,9 @@ fun AppNavigation() {
                 onNotificationsClick = {
                     navController.navigate(Screen.Notifications.route)
                 },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
                 onTripClick = { trip ->
                     navController.navigate(
                         Screen.TripDetails.createRoute(trip.id)
@@ -167,6 +172,35 @@ fun AppNavigation() {
 
             NotificationsScreen(
                 uiState = uiState
+            )
+        }
+
+        composable(Screen.Profile.route) {
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = ViewModelFactory {
+                    ProfileViewModel(authRepository)
+                }
+            )
+
+            val uiState by profileViewModel.uiState.collectAsState()
+
+            /**
+             * Загружаем профиль при открытии экрана.
+             */
+            LaunchedEffect(Unit) {
+                profileViewModel.loadProfile()
+            }
+
+            ProfileScreen(
+                uiState = uiState,
+                onSignOutClick = profileViewModel::signOut,
+                onSignedOut = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                    }
+                }
             )
         }
         composable(Screen.CreateTrip.route) {

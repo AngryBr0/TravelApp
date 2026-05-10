@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.route
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -173,5 +175,43 @@ private fun RoutePointCard(
                 Text("Удалить")
             }
         }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+private fun RouteTabPreview() {
+    TravelAppTheme {
+        RouteTab(
+            tripId = "trip-1",
+            uiState = RouteUiState(
+                routePoints = listOf(
+                    RoutePoint(
+                        id = "1",
+                        title = "Эрмитаж",
+                        address = "Санкт-Петербург",
+                        description = "Музей",
+                        latitude = 59.9398,
+                        longitude = 30.3146,
+                        order = 1
+                    ),
+                    RoutePoint(
+                        id = "2",
+                        title = "Казанский собор",
+                        address = "Санкт-Петербург",
+                        description = "Достопримечательность",
+                        latitude = 59.9343,
+                        longitude = 30.3245,
+                        order = 2
+                    )
+                )
+            ),
+            onTitleChange = {},
+            onAddressChange = {},
+            onDescriptionChange = {},
+            onLatitudeChange = {},
+            onLongitudeChange = {},
+            onAddPointClick = {},
+            onDeletePointClick = {}
+        )
     }
 }

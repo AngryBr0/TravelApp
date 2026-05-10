@@ -1,5 +1,7 @@
 package com.example.travelapp.presentation.trips
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +28,7 @@ fun TripsScreen(
     uiState: TripsUiState,
     onCreateTripClick: () -> Unit,
     onNotificationsClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onTripClick: (Trip) -> Unit
 ) {
     Column(
@@ -51,6 +54,15 @@ fun TripsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Уведомления")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onProfileClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Профиль")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -109,5 +121,35 @@ private fun TripCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = "${trip.startDate} — ${trip.endDate}")
         }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+private fun TripsScreenPreview() {
+    TravelAppTheme {
+        TripsScreen(
+            uiState = TripsUiState(
+                trips = listOf(
+                    Trip(
+                        id = "1",
+                        title = "Поездка в Санкт-Петербург",
+                        description = "Музеи, прогулки и достопримечательности",
+                        startDate = "01.05.2026",
+                        endDate = "05.05.2026"
+                    ),
+                    Trip(
+                        id = "2",
+                        title = "Путешествие в Казань",
+                        description = "Маршрут на выходные",
+                        startDate = "10.06.2026",
+                        endDate = "12.06.2026"
+                    )
+                )
+            ),
+            onCreateTripClick = {},
+            onNotificationsClick = {},
+            onProfileClick = {},
+            onTripClick = {}
+        )
     }
 }
