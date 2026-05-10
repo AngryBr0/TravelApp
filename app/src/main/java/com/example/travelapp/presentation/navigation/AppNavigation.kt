@@ -8,7 +8,7 @@ import com.example.travelapp.presentation.profile.ProfileViewModel
 import com.example.travelapp.data.repository.impl.FakeNotificationRepository
 import com.example.travelapp.presentation.notifications.NotificationsScreen
 import com.example.travelapp.presentation.notifications.NotificationsViewModel
-import com.example.travelapp.data.repository.impl.FakeParticipantRepository
+import com.example.travelapp.data.repository.impl.FirebaseParticipantRepository
 import com.example.travelapp.presentation.participants.ParticipantsViewModel
 import com.example.travelapp.data.repository.impl.FirebaseExpenseRepository
 import com.example.travelapp.presentation.budget.BudgetViewModel
@@ -73,7 +73,11 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
-    val participantRepository = remember { FakeParticipantRepository() }
+    val participantRepository = remember {
+        FirebaseParticipantRepository(
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
     val notificationRepository = remember { FakeNotificationRepository() }
 
     NavHost(
