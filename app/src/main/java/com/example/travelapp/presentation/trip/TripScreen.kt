@@ -95,7 +95,10 @@ fun TripScreen(
                 onDeletePointClick = onDeleteRoutePointClick
             )
 
-            1 -> MapTab(tripId = tripId)
+            1 -> MapTab(
+                tripId = tripId,
+                routePoints = routeUiState.routePoints
+            )
 
             2 -> BudgetTab(
                 tripId = tripId,

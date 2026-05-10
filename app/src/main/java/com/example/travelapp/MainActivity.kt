@@ -1,5 +1,6 @@
 package com.example.travelapp
 
+import com.yandex.mapkit.MapKitFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +30,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         /**
+         * Инициализируем MapKit.
+         *
+         * По документации MapKitFactory.initialize(Context)
+         * загружает необходимые нативные библиотеки MapKit.
+         */
+        MapKitFactory.initialize(this)
+        /**
          * setContent запускает Jetpack Compose.
          *
          * Внутри setContent мы описываем, какой интерфейс
@@ -49,5 +57,20 @@ class MainActivity : ComponentActivity() {
                 AppNavigation()
             }
         }
+    }
+    /**
+     * Передаем событие onStart в MapKit.
+     */
+    override fun onStart() {
+        super.onStart()
+        MapKitFactory.getInstance().onStart()
+    }
+
+    /**
+     * Передаем событие onStop в MapKit.
+     */
+    override fun onStop() {
+        MapKitFactory.getInstance().onStop()
+        super.onStop()
     }
 }
