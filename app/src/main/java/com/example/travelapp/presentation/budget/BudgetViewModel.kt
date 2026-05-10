@@ -109,7 +109,9 @@ class BudgetViewModel(
             return
         }
 
-        val amount = state.amount.toDoubleOrNull()
+        val amount = state.amount
+            .replace(",", ".")
+            .toDoubleOrNull()
 
         if (amount == null || amount <= 0.0) {
             _uiState.value = state.copy(
