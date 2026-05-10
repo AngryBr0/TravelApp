@@ -159,7 +159,8 @@ class RouteViewModel(
                                 userId = userId,
                                 tripId = tripId,
                                 text = "Добавлена точка маршрута: ${point.title}",
-                                createdAt = getCurrentDateTime()
+                                createdAt = getCurrentDateTime(),
+                                createdAtMillis = System.currentTimeMillis()
                             )
                         )
                     }

@@ -5,7 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.travelapp.presentation.profile.ProfileScreen
 import com.example.travelapp.presentation.profile.ProfileViewModel
-import com.example.travelapp.data.repository.impl.FakeNotificationRepository
+import com.example.travelapp.data.repository.impl.FirebaseNotificationRepository
 import com.example.travelapp.presentation.notifications.NotificationsScreen
 import com.example.travelapp.presentation.notifications.NotificationsViewModel
 import com.example.travelapp.data.repository.impl.FirebaseParticipantRepository
@@ -78,7 +78,11 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
-    val notificationRepository = remember { FakeNotificationRepository() }
+    val notificationRepository = remember {
+        FirebaseNotificationRepository(
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
 
     NavHost(
         navController = navController,

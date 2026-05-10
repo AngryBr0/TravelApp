@@ -161,7 +161,8 @@ class BudgetViewModel(
                                 userId = userId,
                                 tripId = tripId,
                                 text = "Добавлен расход: ${expense.title} — ${expense.amount} ₽",
-                                createdAt = getCurrentDateTime()
+                                createdAt = getCurrentDateTime(),
+                                createdAtMillis = System.currentTimeMillis()
                             )
                         )
                     }

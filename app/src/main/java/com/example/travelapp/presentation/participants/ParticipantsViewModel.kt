@@ -139,7 +139,8 @@ class ParticipantsViewModel(
                                 userId = userId,
                                 tripId = tripId,
                                 text = "Приглашён участник: ${participant.email}",
-                                createdAt = getCurrentDateTime()
+                                createdAt = getCurrentDateTime(),
+                                createdAtMillis = System.currentTimeMillis()
                             )
                         )
                     }
