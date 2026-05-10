@@ -1,5 +1,8 @@
 package com.example.travelapp.presentation.navigation
 
+
+import com.example.travelapp.data.repository.impl.FakeRouteRepository
+import com.example.travelapp.presentation.route.RouteViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -38,8 +41,10 @@ fun AppNavigation() {
      * remember нужен, чтобы репозитории не создавались заново
      * при каждой перерисовке интерфейса.
      */
+
     val authRepository = remember { FakeAuthRepository() }
     val tripRepository = remember { FakeTripRepository() }
+    val routeRepository = remember { FakeRouteRepository() }
 
     NavHost(
         navController = navController,
@@ -157,8 +162,48 @@ fun AppNavigation() {
         composable(Screen.TripDetails.route) { backStackEntry ->
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
 
+            /**
+             * RouteViewModel создается для экрана поездки.
+             *
+             * Она отвечает за вкладку маршрута:
+             * добавление, отображение и удаление точек маршрута.
+             */
+            val routeViewModel: RouteViewModel = viewModel(
+                factory = ViewModelFactory {
+                    RouteViewModel(routeRepository)
+                }
+            )
+
+            val routeUiState by routeViewModel.uiState.collectAsState()
+
+            /**
+             * Загружаем точки маршрута выбранной поездки.
+             *
+             * LaunchedEffect(tripId) выполнится при открытии экрана
+             * и при изменении id поездки.
+             */
+            LaunchedEffect(tripId) {
+                routeViewModel.loadRoutePoints(tripId)
+            }
+
             TripScreen(
-                tripId = tripId
+                tripId = tripId,
+
+                routeUiState = routeUiState,
+                onRouteTitleChange = routeViewModel::updateTitle,
+                onRouteAddressChange = routeViewModel::updateAddress,
+                onRouteDescriptionChange = routeViewModel::updateDescription,
+                onRouteLatitudeChange = routeViewModel::updateLatitude,
+                onRouteLongitudeChange = routeViewModel::updateLongitude,
+                onAddRoutePointClick = {
+                    routeViewModel.addRoutePoint(tripId)
+                },
+                onDeleteRoutePointClick = { pointId ->
+                    routeViewModel.deleteRoutePoint(
+                        tripId = tripId,
+                        pointId = pointId
+                    )
+                }
             )
         }
     }

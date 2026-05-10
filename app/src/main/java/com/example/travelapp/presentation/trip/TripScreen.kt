@@ -13,32 +13,33 @@ import com.example.travelapp.presentation.budget.BudgetTab
 import com.example.travelapp.presentation.map.MapTab
 import com.example.travelapp.presentation.participants.ParticipantsTab
 import com.example.travelapp.presentation.route.RouteTab
+import com.example.travelapp.presentation.route.RouteUiState
 
 /**
  * TripScreen — экран конкретной поездки.
  *
- * Этот экран является центральным для работы с одной поездкой.
- * Он объединяет четыре основные вкладки:
+ * Здесь находятся вкладки:
+ * - маршрут;
+ * - карта;
+ * - бюджет;
+ * - участники.
  *
- * 1. Маршрут
- * 2. Карта
- * 3. Бюджет
- * 4. Участники
- *
- * Такая структура соответствует логике ВКР:
- * пользователь работает с маршрутом, картой, расходами и участниками
- * в рамках одной выбранной поездки.
+ * Сам экран не содержит бизнес-логику.
+ * Он только передает данные во вкладки и вызывает callbacks.
  */
 @Composable
 fun TripScreen(
-    tripId: String
+    tripId: String,
+
+    routeUiState: RouteUiState,
+    onRouteTitleChange: (String) -> Unit,
+    onRouteAddressChange: (String) -> Unit,
+    onRouteDescriptionChange: (String) -> Unit,
+    onRouteLatitudeChange: (String) -> Unit,
+    onRouteLongitudeChange: (String) -> Unit,
+    onAddRoutePointClick: () -> Unit,
+    onDeleteRoutePointClick: (String) -> Unit
 ) {
-    /**
-     * selectedTabIndex хранит номер выбранной вкладки.
-     *
-     * remember нужен, чтобы Compose запоминал выбранную вкладку
-     * при перерисовке экрана.
-     */
     val selectedTabIndex = remember { mutableIntStateOf(0) }
 
     val tabs = listOf(
@@ -51,9 +52,6 @@ fun TripScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        /**
-         * TabRow — строка вкладок.
-         */
         TabRow(
             selectedTabIndex = selectedTabIndex.intValue
         ) {
@@ -70,13 +68,23 @@ fun TripScreen(
             }
         }
 
-        /**
-         * В зависимости от выбранной вкладки показываем нужный экран.
-         */
         when (selectedTabIndex.intValue) {
-            0 -> RouteTab(tripId = tripId)
+            0 -> RouteTab(
+                tripId = tripId,
+                uiState = routeUiState,
+                onTitleChange = onRouteTitleChange,
+                onAddressChange = onRouteAddressChange,
+                onDescriptionChange = onRouteDescriptionChange,
+                onLatitudeChange = onRouteLatitudeChange,
+                onLongitudeChange = onRouteLongitudeChange,
+                onAddPointClick = onAddRoutePointClick,
+                onDeletePointClick = onDeleteRoutePointClick
+            )
+
             1 -> MapTab(tripId = tripId)
+
             2 -> BudgetTab(tripId = tripId)
+
             3 -> ParticipantsTab(tripId = tripId)
         }
     }
