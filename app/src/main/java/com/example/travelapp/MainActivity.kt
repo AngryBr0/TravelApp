@@ -4,44 +4,50 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.travelapp.ui.theme.TravelAppTheme
+import com.example.travelapp.presentation.navigation.AppNavigation
 
+
+/**
+ * MainActivity — главная Activity приложения.
+ *
+ * Activity — это точка входа в Android-приложение.
+ * Когда пользователь запускает приложение, первым создается MainActivity.
+ */
 class MainActivity : ComponentActivity() {
+
+    /**
+     * onCreate вызывается при создании экрана приложения.
+     *
+     * override означает, что мы переопределяем метод,
+     * который уже есть в базовом классе ComponentActivity.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Включает современный режим отображения приложения "от края до края"
         enableEdgeToEdge()
+
+        /**
+         * setContent запускает Jetpack Compose.
+         *
+         * Внутри setContent мы описываем, какой интерфейс
+         * должен отображаться на экране.
+         */
         setContent {
+            /**
+             * TravelAppTheme — тема приложения.
+             *
+             * Она задает цвета, шрифты и общий стиль интерфейса.
+             */
             TravelAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                /**
+                 * AppNavigation отвечает за переходы между экранами:
+                 * LoginScreen, RegisterScreen, TripsScreen,
+                 * CreateTripScreen и TripScreen.
+                 */
+                AppNavigation()
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TravelAppTheme {
-        Greeting("Android")
     }
 }
