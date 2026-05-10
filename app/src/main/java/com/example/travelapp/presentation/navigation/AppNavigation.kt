@@ -1,5 +1,8 @@
 package com.example.travelapp.presentation.navigation
 
+import com.example.travelapp.data.repository.impl.FirebaseAuthRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.example.travelapp.presentation.profile.ProfileScreen
 import com.example.travelapp.presentation.profile.ProfileViewModel
 import com.example.travelapp.data.repository.impl.FakeNotificationRepository
@@ -21,7 +24,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.travelapp.core.ViewModelFactory
-import com.example.travelapp.data.repository.impl.FakeAuthRepository
 import com.example.travelapp.data.repository.impl.FakeTripRepository
 import com.example.travelapp.presentation.auth.AuthViewModel
 import com.example.travelapp.presentation.auth.LoginScreen
@@ -50,7 +52,12 @@ fun AppNavigation() {
      * при каждой перерисовке интерфейса.
      */
 
-    val authRepository = remember { FakeAuthRepository() }
+    val authRepository = remember {
+        FirebaseAuthRepository(
+            firebaseAuth = FirebaseAuth.getInstance(),
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
     val tripRepository = remember { FakeTripRepository() }
     val routeRepository = remember { FakeRouteRepository() }
     val expenseRepository = remember { FakeExpenseRepository() }
