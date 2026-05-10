@@ -24,7 +24,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.travelapp.core.ViewModelFactory
-import com.example.travelapp.data.repository.impl.FakeTripRepository
+import com.example.travelapp.data.repository.impl.FirebaseTripRepository
 import com.example.travelapp.presentation.auth.AuthViewModel
 import com.example.travelapp.presentation.auth.LoginScreen
 import com.example.travelapp.presentation.auth.RegisterScreen
@@ -58,7 +58,11 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
-    val tripRepository = remember { FakeTripRepository() }
+    val tripRepository = remember {
+        FirebaseTripRepository(
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
     val routeRepository = remember { FakeRouteRepository() }
     val expenseRepository = remember { FakeExpenseRepository() }
     val participantRepository = remember { FakeParticipantRepository() }
