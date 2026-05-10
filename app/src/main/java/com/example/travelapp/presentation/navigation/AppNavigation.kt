@@ -1,5 +1,8 @@
 package com.example.travelapp.presentation.navigation
 
+import com.example.travelapp.data.repository.impl.FakeNotificationRepository
+import com.example.travelapp.presentation.notifications.NotificationsScreen
+import com.example.travelapp.presentation.notifications.NotificationsViewModel
 import com.example.travelapp.data.repository.impl.FakeParticipantRepository
 import com.example.travelapp.presentation.participants.ParticipantsViewModel
 import com.example.travelapp.data.repository.impl.FakeExpenseRepository
@@ -50,6 +53,7 @@ fun AppNavigation() {
     val routeRepository = remember { FakeRouteRepository() }
     val expenseRepository = remember { FakeExpenseRepository() }
     val participantRepository = remember { FakeParticipantRepository() }
+    val notificationRepository = remember { FakeNotificationRepository() }
 
     NavHost(
         navController = navController,
@@ -131,6 +135,9 @@ fun AppNavigation() {
                 onCreateTripClick = {
                     navController.navigate(Screen.CreateTrip.route)
                 },
+                onNotificationsClick = {
+                    navController.navigate(Screen.Notifications.route)
+                },
                 onTripClick = { trip ->
                     navController.navigate(
                         Screen.TripDetails.createRoute(trip.id)
@@ -139,6 +146,29 @@ fun AppNavigation() {
             )
         }
 
+        composable(Screen.Notifications.route) {
+            val notificationsViewModel: NotificationsViewModel = viewModel(
+                factory = ViewModelFactory {
+                    NotificationsViewModel(
+                        authRepository = authRepository,
+                        notificationRepository = notificationRepository
+                    )
+                }
+            )
+
+            val uiState by notificationsViewModel.uiState.collectAsState()
+
+            /**
+             * Загружаем уведомления при открытии экрана.
+             */
+            LaunchedEffect(Unit) {
+                notificationsViewModel.loadNotifications()
+            }
+
+            NotificationsScreen(
+                uiState = uiState
+            )
+        }
         composable(Screen.CreateTrip.route) {
             val createTripViewModel: CreateTripViewModel = viewModel(
                 factory = ViewModelFactory {
@@ -172,7 +202,11 @@ fun AppNavigation() {
              */
             val routeViewModel: RouteViewModel = viewModel(
                 factory = ViewModelFactory {
-                    RouteViewModel(routeRepository)
+                    RouteViewModel(
+                        routeRepository = routeRepository,
+                        authRepository = authRepository,
+                        notificationRepository = notificationRepository
+                    )
                 }
             )
 
@@ -185,7 +219,8 @@ fun AppNavigation() {
                 factory = ViewModelFactory {
                     BudgetViewModel(
                         authRepository = authRepository,
-                        expenseRepository = expenseRepository
+                        expenseRepository = expenseRepository,
+                        notificationRepository = notificationRepository
                     )
                 }
             )
@@ -197,7 +232,11 @@ fun AppNavigation() {
              */
             val participantsViewModel: ParticipantsViewModel = viewModel(
                 factory = ViewModelFactory {
-                    ParticipantsViewModel(participantRepository)
+                    ParticipantsViewModel(
+                        participantRepository = participantRepository,
+                        authRepository = authRepository,
+                        notificationRepository = notificationRepository
+                    )
                 }
             )
 

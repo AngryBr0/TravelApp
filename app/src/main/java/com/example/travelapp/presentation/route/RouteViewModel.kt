@@ -1,5 +1,11 @@
 package com.example.travelapp.presentation.route
 
+import com.example.travelapp.data.model.NotificationItem
+import com.example.travelapp.data.repository.AuthRepository
+import com.example.travelapp.data.repository.NotificationRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelapp.core.AppResult
@@ -24,7 +30,9 @@ import kotlinx.coroutines.launch
  * - обновляет список точек маршрута.
  */
 class RouteViewModel(
-    private val routeRepository: RouteRepository
+    private val routeRepository: RouteRepository,
+    private val authRepository: AuthRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RouteUiState())
@@ -139,6 +147,18 @@ class RouteViewModel(
                         longitude = "",
                         errorMessage = null
                     )
+                    val userId = authRepository.getCurrentUserId()
+
+                    if (userId != null) {
+                        notificationRepository.addNotification(
+                            NotificationItem(
+                                userId = userId,
+                                tripId = tripId,
+                                text = "Добавлена точка маршрута: ${point.title}",
+                                createdAt = getCurrentDateTime()
+                            )
+                        )
+                    }
                 }
 
                 is AppResult.Error -> {
@@ -166,5 +186,16 @@ class RouteViewModel(
                 pointId = pointId
             )
         }
+    }
+    /**
+     * Возвращает текущую дату и время в читаемом формате.
+     *
+     * Используется для отображения времени создания уведомления.
+     */
+    private fun getCurrentDateTime(): String {
+        return SimpleDateFormat(
+            "dd.MM.yyyy HH:mm",
+            Locale.getDefault()
+        ).format(Date())
     }
 }

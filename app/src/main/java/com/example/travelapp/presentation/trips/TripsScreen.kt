@@ -25,6 +25,7 @@ import com.example.travelapp.data.model.Trip
 fun TripsScreen(
     uiState: TripsUiState,
     onCreateTripClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
     onTripClick: (Trip) -> Unit
 ) {
     Column(
@@ -41,6 +42,15 @@ fun TripsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Создать поездку")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onNotificationsClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Уведомления")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

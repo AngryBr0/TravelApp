@@ -1,5 +1,11 @@
 package com.example.travelapp.presentation.participants
 
+import com.example.travelapp.data.model.NotificationItem
+import com.example.travelapp.data.repository.AuthRepository
+import com.example.travelapp.data.repository.NotificationRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelapp.core.AppResult
@@ -23,7 +29,9 @@ import kotlinx.coroutines.launch
  * - преобразует текстовую роль в enum ParticipantRole.
  */
 class ParticipantsViewModel(
-    private val participantRepository: ParticipantRepository
+    private val participantRepository: ParticipantRepository,
+    private val authRepository: AuthRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ParticipantsUiState())
@@ -123,6 +131,18 @@ class ParticipantsViewModel(
                         role = "viewer",
                         errorMessage = null
                     )
+                    val userId = authRepository.getCurrentUserId()
+
+                    if (userId != null) {
+                        notificationRepository.addNotification(
+                            NotificationItem(
+                                userId = userId,
+                                tripId = tripId,
+                                text = "Приглашён участник: ${participant.email}",
+                                createdAt = getCurrentDateTime()
+                            )
+                        )
+                    }
                 }
 
                 is AppResult.Error -> {
@@ -150,5 +170,14 @@ class ParticipantsViewModel(
             "viewer", "наблюдатель" -> ParticipantRole.VIEWER
             else -> ParticipantRole.VIEWER
         }
+    }
+    /**
+     * Возвращает текущую дату и время для уведомления.
+     */
+    private fun getCurrentDateTime(): String {
+        return SimpleDateFormat(
+            "dd.MM.yyyy HH:mm",
+            Locale.getDefault()
+        ).format(Date())
     }
 }

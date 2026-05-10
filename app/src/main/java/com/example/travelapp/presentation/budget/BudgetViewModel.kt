@@ -1,5 +1,10 @@
 package com.example.travelapp.presentation.budget
 
+import com.example.travelapp.data.model.NotificationItem
+import com.example.travelapp.data.repository.NotificationRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelapp.core.AppResult
@@ -25,7 +30,8 @@ import kotlinx.coroutines.launch
  */
 class BudgetViewModel(
     private val authRepository: AuthRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BudgetUiState())
@@ -145,6 +151,18 @@ class BudgetViewModel(
                         amount = "",
                         errorMessage = null
                     )
+                    val userId = authRepository.getCurrentUserId()
+
+                    if (userId != null) {
+                        notificationRepository.addNotification(
+                            NotificationItem(
+                                userId = userId,
+                                tripId = tripId,
+                                text = "Добавлен расход: ${expense.title} — ${expense.amount} ₽",
+                                createdAt = getCurrentDateTime()
+                            )
+                        )
+                    }
                 }
 
                 is AppResult.Error -> {
@@ -188,5 +206,14 @@ class BudgetViewModel(
             "развлечения", "entertainment" -> ExpenseCategory.ENTERTAINMENT
             else -> ExpenseCategory.OTHER
         }
+    }
+    /**
+     * Возвращает текущую дату и время для уведомления.
+     */
+    private fun getCurrentDateTime(): String {
+        return SimpleDateFormat(
+            "dd.MM.yyyy HH:mm",
+            Locale.getDefault()
+        ).format(Date())
     }
 }
