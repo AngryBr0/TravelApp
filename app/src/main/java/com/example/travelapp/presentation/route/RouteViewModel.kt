@@ -70,6 +70,9 @@ class RouteViewModel(
         observeJob?.cancel()
 
         observeJob = viewModelScope.launch {
+            /**
+             * загрузка
+             */
             routeRepository.observeRoutePoints(tripId).collect { result ->
                 when (result) {
                     AppResult.Loading -> {
@@ -135,6 +138,7 @@ class RouteViewModel(
                 isLoading = true,
                 errorMessage = null
             )
+                /*добавление маршрута через интерфейс*/
 
             when (val result = routeRepository.addRoutePoint(tripId, point)) {
                 is AppResult.Success -> {

@@ -12,7 +12,7 @@ import com.example.travelapp.data.repository.impl.FakeParticipantRepository
 import com.example.travelapp.presentation.participants.ParticipantsViewModel
 import com.example.travelapp.data.repository.impl.FakeExpenseRepository
 import com.example.travelapp.presentation.budget.BudgetViewModel
-import com.example.travelapp.data.repository.impl.FakeRouteRepository
+import com.example.travelapp.data.repository.impl.FirebaseRouteRepository
 import com.example.travelapp.presentation.route.RouteViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,7 +63,11 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
-    val routeRepository = remember { FakeRouteRepository() }
+    val routeRepository = remember {
+        FirebaseRouteRepository(
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
     val expenseRepository = remember { FakeExpenseRepository() }
     val participantRepository = remember { FakeParticipantRepository() }
     val notificationRepository = remember { FakeNotificationRepository() }
