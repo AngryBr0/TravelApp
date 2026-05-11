@@ -20,6 +20,8 @@ sealed class Screen(val route: String) {
 
     object Notifications : Screen("notifications")
 
+    object Invitations : Screen("invitations")
+
     /**
      * Экран конкретной поездки.
      *

@@ -28,6 +28,7 @@ fun TripsScreen(
     uiState: TripsUiState,
     onCreateTripClick: () -> Unit,
     onNotificationsClick: () -> Unit,
+    onInvitationsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onTripClick: (Trip) -> Unit
 ) {
@@ -54,6 +55,15 @@ fun TripsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Уведомления")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onInvitationsClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Приглашения")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -146,6 +156,7 @@ private fun TripsScreenPreview() {
                     )
                 )
             ),
+            onInvitationsClick = {},
             onCreateTripClick = {},
             onNotificationsClick = {},
             onProfileClick = {},

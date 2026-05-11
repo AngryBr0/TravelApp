@@ -83,11 +83,15 @@ class FirebaseParticipantRepository(
                 return AppResult.Error("Этот участник уже добавлен")
             }
 
-            val document = participantsCollection(tripId).document()
+            val normalizedEmail = participant.email.trim().lowercase()
+
+            val document = participantsCollection(tripId)
+                .document(normalizedEmail)
 
             val participantWithId = participant.copy(
-                id = document.id,
-                tripId = tripId
+                id = normalizedEmail,
+                tripId = tripId,
+                email = normalizedEmail
             )
 
             /**

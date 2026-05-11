@@ -33,6 +33,10 @@ import com.example.travelapp.presentation.trips.CreateTripScreen
 import com.example.travelapp.presentation.trips.CreateTripViewModel
 import com.example.travelapp.presentation.trips.TripsScreen
 import com.example.travelapp.presentation.trips.TripsViewModel
+import com.example.travelapp.data.repository.impl.FirebaseInvitationRepository
+import com.example.travelapp.presentation.invitations.InvitationsScreen
+import com.example.travelapp.presentation.invitations.InvitationsViewModel
+import com.example.travelapp.presentation.trip.TripViewModel
 
 /**
  * AppNavigation описывает навигацию между экранами приложения.
@@ -83,11 +87,41 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
+    val invitationRepository = remember {
+        FirebaseInvitationRepository(
+            firestore = FirebaseFirestore.getInstance()
+        )
+    }
 
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
+        composable(Screen.Invitations.route) {
+            val invitationsViewModel: InvitationsViewModel = viewModel(
+                factory = ViewModelFactory {
+                    InvitationsViewModel(
+                        authRepository = authRepository,
+                        invitationRepository = invitationRepository
+                    )
+                }
+            )
+
+            val uiState by invitationsViewModel.uiState.collectAsState()
+
+            /**
+             * Загружаем входящие приглашения при открытии экрана.
+             */
+            LaunchedEffect(Unit) {
+                invitationsViewModel.loadInvitations()
+            }
+
+            InvitationsScreen(
+                uiState = uiState,
+                onAcceptClick = invitationsViewModel::acceptInvitation,
+                onDeclineClick = invitationsViewModel::declineInvitation
+            )
+        }
         composable(Screen.Login.route) {
             val authViewModel: AuthViewModel = viewModel(
                 factory = ViewModelFactory {
@@ -169,6 +203,9 @@ fun AppNavigation() {
                 },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onInvitationsClick = {
+                    navController.navigate(Screen.Invitations.route)
                 },
                 onTripClick = { trip ->
                     navController.navigate(
@@ -273,6 +310,13 @@ fun AppNavigation() {
 
             val routeUiState by routeViewModel.uiState.collectAsState()
 
+            val tripViewModel: TripViewModel = viewModel(
+                factory = ViewModelFactory {
+                    TripViewModel(tripRepository)
+                }
+            )
+
+            val tripUiState by tripViewModel.uiState.collectAsState()
             /**
              * ViewModel бюджета.
              */
@@ -295,6 +339,7 @@ fun AppNavigation() {
                 factory = ViewModelFactory {
                     ParticipantsViewModel(
                         participantRepository = participantRepository,
+                        invitationRepository = invitationRepository,
                         authRepository = authRepository,
                         notificationRepository = notificationRepository
                     )
@@ -313,6 +358,7 @@ fun AppNavigation() {
                 routeViewModel.loadRoutePoints(tripId)
                 budgetViewModel.loadExpenses(tripId)
                 participantsViewModel.loadParticipants(tripId)
+                tripViewModel.loadTrip(tripId)
             }
 
             TripScreen(
@@ -352,7 +398,10 @@ fun AppNavigation() {
                 onParticipantEmailChange = participantsViewModel::updateEmail,
                 onParticipantRoleChange = participantsViewModel::updateRole,
                 onInviteParticipantClick = {
-                    participantsViewModel.inviteParticipant(tripId)
+                    participantsViewModel.inviteParticipant(
+                        tripId = tripId,
+                        tripTitle = tripUiState.trip?.title.orEmpty()
+                    )
                 }
             )
         }
