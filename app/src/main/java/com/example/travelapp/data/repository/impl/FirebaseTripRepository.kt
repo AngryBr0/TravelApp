@@ -86,6 +86,27 @@ class FirebaseTripRepository(
 
             document.set(tripMap).await()
 
+            /**
+             * При создании поездки сразу добавляем создателя
+             * в подколлекцию participants как организатора.
+             *
+             * Это нужно, чтобы во вкладке "Участники" был виден
+             * не только приглашенный пользователь, но и сам организатор.
+             */
+            val organizerParticipant = mapOf(
+                "id" to tripWithId.ownerId,
+                "tripId" to tripWithId.id,
+                "email" to "",
+                "role" to "ORGANIZER",
+                "status" to "ACCEPTED"
+            )
+
+            document
+                .collection("participants")
+                .document(tripWithId.ownerId)
+                .set(organizerParticipant)
+                .await()
+
             AppResult.Success(Unit)
         } catch (exception: Exception) {
             AppResult.Error(
