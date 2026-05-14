@@ -58,6 +58,8 @@ fun TripScreen(
     onRoutePlaceClick: (PlaceSearchResult) -> Unit,
     onRouteDescriptionChange: (String) -> Unit,
     onAddSelectedPlaceClick: () -> Unit,
+    onMoveRoutePointUpClick: (String) -> Unit,
+    onMoveRoutePointDownClick: (String) -> Unit,
     onDeleteRoutePointClick: (String) -> Unit,
 
     budgetUiState: BudgetUiState,
@@ -153,6 +155,8 @@ fun TripScreen(
                 onPlaceClick = onRoutePlaceClick,
                 onDescriptionChange = onRouteDescriptionChange,
                 onAddSelectedPlaceClick = onAddSelectedPlaceClick,
+                onMovePointUpClick = onMoveRoutePointUpClick,
+                onMovePointDownClick = onMoveRoutePointDownClick,
                 onDeletePointClick = onDeleteRoutePointClick
             )
             1 -> MapTab(

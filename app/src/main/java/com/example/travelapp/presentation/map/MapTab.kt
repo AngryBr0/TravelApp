@@ -21,6 +21,8 @@ import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import com.yandex.mapkit.geometry.Polyline
 import androidx.compose.material3.Button
+import android.widget.Toast
+
 /**
  * MapTab — вкладка карты.
  *
@@ -68,19 +70,27 @@ fun MapTab(
             text = "Карта маршрута",
             modifier = Modifier.padding(16.dp)
         )
-        val exporter = remember { YandexNavigatorExporter() }
+        val exporter = remember { YandexMapsExporter() }
 
         Button(
             onClick = {
-                exporter.openRouteInYandexNavigator(
+                val isOpened = exporter.openRouteInYandexMaps(
                     context = context,
                     routePoints = routePoints
                 )
+
+                if (!isOpened) {
+                    Toast.makeText(
+                        context,
+                        "Не удалось открыть маршрут в Яндекс Картах",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             },
             modifier = Modifier.padding(horizontal = 16.dp),
             enabled = routePoints.size >= 2
         ) {
-            Text("Открыть маршрут в Яндекс Навигаторе")
+            Text("Открыть маршрут в Яндекс Картах")
         }
 
         Spacer(modifier = Modifier.height(12.dp))

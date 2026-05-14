@@ -209,6 +209,117 @@ class RouteViewModel(
     }
 
     /**
+     * Перемещает точку маршрута вверх.
+     *
+     * Логика:
+     * 1. Берем текущий список точек.
+     * 2. Сортируем по order.
+     * 3. Находим выбранную точку.
+     * 4. Меняем её местами с предыдущей.
+     * 5. Пересчитываем order.
+     * 6. Сохраняем новый порядок в репозиторий.
+     */
+    fun movePointUp(
+        tripId: String,
+        pointId: String
+    ) {
+        val currentPoints = _uiState.value.routePoints
+            .sortedBy { point ->
+                point.order
+            }
+            .toMutableList()
+
+        val currentIndex = currentPoints.indexOfFirst { point ->
+            point.id == pointId
+        }
+
+        if (currentIndex <= 0) {
+            return
+        }
+
+        val temp = currentPoints[currentIndex - 1]
+        currentPoints[currentIndex - 1] = currentPoints[currentIndex]
+        currentPoints[currentIndex] = temp
+
+        val reorderedPoints = currentPoints.mapIndexed { index, point ->
+            point.copy(order = index + 1)
+        }
+
+        saveRouteOrder(tripId, reorderedPoints)
+    }
+
+    /**
+     * Перемещает точку маршрута вниз.
+     */
+    fun movePointDown(
+        tripId: String,
+        pointId: String
+    ) {
+        val currentPoints = _uiState.value.routePoints
+            .sortedBy { point ->
+                point.order
+            }
+            .toMutableList()
+
+        val currentIndex = currentPoints.indexOfFirst { point ->
+            point.id == pointId
+        }
+
+        if (currentIndex == -1 || currentIndex >= currentPoints.lastIndex) {
+            return
+        }
+
+        val temp = currentPoints[currentIndex + 1]
+        currentPoints[currentIndex + 1] = currentPoints[currentIndex]
+        currentPoints[currentIndex] = temp
+
+        val reorderedPoints = currentPoints.mapIndexed { index, point ->
+            point.copy(order = index + 1)
+        }
+
+        saveRouteOrder(tripId, reorderedPoints)
+    }
+
+    /**
+     * Сохраняет новый порядок точек маршрута.
+     */
+    private fun saveRouteOrder(
+        tripId: String,
+        points: List<RoutePoint>
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            when (
+                val result = routeRepository.updateRoutePointsOrder(
+                    tripId = tripId,
+                    points = points
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        routePoints = points,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
+    }
+
+    /**
      * Удаляет точку маршрута.
      */
     fun deleteRoutePoint(

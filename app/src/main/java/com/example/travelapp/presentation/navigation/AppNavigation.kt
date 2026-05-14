@@ -406,6 +406,18 @@ fun AppNavigation() {
                 onAddSelectedPlaceClick = {
                     routeViewModel.addSelectedPlaceToRoute(tripId)
                 },
+                onMoveRoutePointUpClick = { pointId ->
+                    routeViewModel.movePointUp(
+                        tripId = tripId,
+                        pointId = pointId
+                    )
+                },
+                onMoveRoutePointDownClick = { pointId ->
+                    routeViewModel.movePointDown(
+                        tripId = tripId,
+                        pointId = pointId
+                    )
+                },
                 onDeleteRoutePointClick = { pointId ->
                     routeViewModel.deleteRoutePoint(
                         tripId = tripId,

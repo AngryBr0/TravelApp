@@ -161,7 +161,40 @@ class FirebaseRouteRepository(
             listener.remove()
         }
     }
+    /**
+     * Обновляет порядок точек маршрута в Firestore.
+     *
+     * Используется batch, чтобы все order обновились одним набором операций.
+     * Это важно, потому что при перестановке двух точек нужно сохранить
+     * новый порядок сразу у нескольких документов.
+     */
+    override suspend fun updateRoutePointsOrder(
+        tripId: String,
+        points: List<RoutePoint>
+    ): AppResult<Unit> {
+        return try {
+            val batch = firestore.batch()
 
+            points.forEach { point ->
+                val document = routePointsCollection(tripId)
+                    .document(point.id)
+
+                batch.update(
+                    document,
+                    "order",
+                    point.order
+                )
+            }
+
+            batch.commit().await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка изменения порядка маршрута"
+            )
+        }
+    }
     /**
      * Удаляет точку маршрута из Firestore.
      */

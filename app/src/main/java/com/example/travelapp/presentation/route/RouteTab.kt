@@ -19,7 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.PlaceSearchResult
 import com.example.travelapp.data.model.RoutePoint
-
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.itemsIndexed
 /**
  * RouteTab — вкладка маршрута поездки.
  *
@@ -36,6 +37,8 @@ fun RouteTab(
     onPlaceClick: (PlaceSearchResult) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onAddSelectedPlaceClick: () -> Unit,
+    onMovePointUpClick: (String) -> Unit,
+    onMovePointDownClick: (String) -> Unit,
     onDeletePointClick: (String) -> Unit
 ) {
     LazyColumn(
@@ -153,10 +156,21 @@ fun RouteTab(
                 Text(text = "Пока точки маршрута не добавлены")
             }
         } else {
-            items(uiState.routePoints.sortedBy { it.order }) { point ->
+            val sortedPoints = uiState.routePoints.sortedBy { point ->
+                point.order
+            }
+            itemsIndexed(sortedPoints) { index, point ->
                 RoutePointCard(
                     point = point,
-                    canDelete = canEdit,
+                    canEdit = canEdit,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < sortedPoints.lastIndex,
+                    onMoveUpClick = {
+                        onMovePointUpClick(point.id)
+                    },
+                    onMoveDownClick = {
+                        onMovePointDownClick(point.id)
+                    },
                     onDeleteClick = {
                         onDeletePointClick(point.id)
                     }
@@ -201,11 +215,20 @@ private fun SearchResultCard(
 
 /**
  * Карточка точки маршрута.
+ *
+ * Здесь отображается точка и кнопки управления порядком:
+ * ↑ — поднять выше
+ * ↓ — опустить ниже
+ * Удалить — удалить точку
  */
 @Composable
 private fun RoutePointCard(
     point: RoutePoint,
-    canDelete: Boolean,
+    canEdit: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUpClick: () -> Unit,
+    onMoveDownClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -234,11 +257,31 @@ private fun RoutePointCard(
                 text = "Координаты: ${point.latitude}, ${point.longitude}"
             )
 
-            if (canDelete) {
+            if (canEdit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = onDeleteClick) {
-                    Text("Удалить")
+                Row {
+                    Button(
+                        onClick = onMoveUpClick,
+                        enabled = canMoveUp
+                    ) {
+                        Text("↑")
+                    }
+
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+
+                    Button(
+                        onClick = onMoveDownClick,
+                        enabled = canMoveDown
+                    ) {
+                        Text("↓")
+                    }
+
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+
+                    Button(onClick = onDeleteClick) {
+                        Text("Удалить")
+                    }
                 }
             }
         }
