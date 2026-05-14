@@ -29,6 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import com.example.travelapp.data.model.PlaceSearchResult
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import com.example.travelapp.ui.components.ErrorMessage
+import com.example.travelapp.ui.components.PrimaryButton
+import com.example.travelapp.ui.components.TravelCard
+import com.example.travelapp.ui.components.TravelScreen
 /**
  * TripScreen — экран конкретной поездки.
  *
@@ -88,139 +94,144 @@ fun TripScreen(
         "Участники"
     )
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Button(
-            onClick = onBackClick,
+    TravelScreen(
+        title = tripTitle.ifBlank { "Поездка" },
+        onBackClick = onBackClick
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            Text("Назад")
-        }
-        Text(
-            text = tripTitle.ifBlank { "Поездка" },
-            modifier = Modifier.fillMaxWidth()
-        )
+            if (canDeleteTrip) {
+                TravelCard(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Управление поездкой",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-        Spacer(modifier = Modifier.height(8.dp))
+                    PrimaryButton(
+                        text = "Удалить поездку",
+                        onClick = {
+                            showDeleteDialog = true
+                        },
+                        enabled = !isDeletingTrip
+                    )
 
-        if (canDeleteTrip) {
-            Button(
-                onClick = {
-                    showDeleteDialog = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isDeletingTrip
-            ) {
-                Text("Удалить поездку")
+                    if (isDeletingTrip) {
+                        CircularProgressIndicator()
+                    }
+
+                    ErrorMessage(message = tripErrorMessage)
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+            if (isDeletingTrip) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
-        if (isDeletingTrip) {
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+            if (tripErrorMessage != null) {
+                Text(text = tripErrorMessage)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            TabRow(
+                selectedTabIndex = selectedTabIndex.intValue
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex.intValue == index,
+                        onClick = {
+                            selectedTabIndex.intValue = index
+                        },
+                        text = {
+                            Text(text = title)
+                        }
+                    )
+                }
+            }
 
-        if (tripErrorMessage != null) {
-            Text(text = tripErrorMessage)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        TabRow(
-            selectedTabIndex = selectedTabIndex.intValue
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex.intValue == index,
-                    onClick = {
-                        selectedTabIndex.intValue = index
-                    },
-                    text = {
-                        Text(text = title)
-                    }
+            when (selectedTabIndex.intValue) {
+                0 -> RouteTab(
+                    tripId = tripId,
+                    uiState = routeUiState,
+                    canEdit = participantsUiState.canEditTrip,
+                    onSearchQueryChange = onRouteSearchQueryChange,
+                    onSearchClick = onRouteSearchClick,
+                    onPlaceClick = onRoutePlaceClick,
+                    onDescriptionChange = onRouteDescriptionChange,
+                    onAddSelectedPlaceClick = onAddSelectedPlaceClick,
+                    onMovePointUpClick = onMoveRoutePointUpClick,
+                    onMovePointDownClick = onMoveRoutePointDownClick,
+                    onDeletePointClick = onDeleteRoutePointClick
+                )
+
+                1 -> MapTab(
+                    tripId = tripId,
+                    routePoints = routeUiState.routePoints
+                )
+
+                2 -> BudgetTab(
+                    tripId = tripId,
+                    uiState = budgetUiState,
+                    canEdit = participantsUiState.canEditTrip,
+                    onTitleChange = onBudgetTitleChange,
+                    onCategoryChange = onBudgetCategoryChange,
+                    onAmountChange = onBudgetAmountChange,
+                    onAddExpenseClick = onAddExpenseClick,
+                    onDeleteExpenseClick = onDeleteExpenseClick
+                )
+
+                3 -> ParticipantsTab(
+                    tripId = tripId,
+                    uiState = participantsUiState,
+                    currentUserRole = participantsUiState.currentUserRole,
+                    canInvite = participantsUiState.canInviteParticipants,
+                    onEmailChange = onParticipantEmailChange,
+                    onRoleChange = onParticipantRoleChange,
+                    onInviteClick = onInviteParticipantClick
                 )
             }
         }
-
-        when (selectedTabIndex.intValue) {
-            0 -> RouteTab(
-                tripId = tripId,
-                uiState = routeUiState,
-                canEdit = participantsUiState.canEditTrip,
-                onSearchQueryChange = onRouteSearchQueryChange,
-                onSearchClick = onRouteSearchClick,
-                onPlaceClick = onRoutePlaceClick,
-                onDescriptionChange = onRouteDescriptionChange,
-                onAddSelectedPlaceClick = onAddSelectedPlaceClick,
-                onMovePointUpClick = onMoveRoutePointUpClick,
-                onMovePointDownClick = onMoveRoutePointDownClick,
-                onDeletePointClick = onDeleteRoutePointClick
-            )
-            1 -> MapTab(
-                tripId = tripId,
-                routePoints = routeUiState.routePoints
-            )
-
-            2 -> BudgetTab(
-                tripId = tripId,
-                uiState = budgetUiState,
-                canEdit = participantsUiState.canEditTrip,
-                onTitleChange = onBudgetTitleChange,
-                onCategoryChange = onBudgetCategoryChange,
-                onAmountChange = onBudgetAmountChange,
-                onAddExpenseClick = onAddExpenseClick,
-                onDeleteExpenseClick = onDeleteExpenseClick
-            )
-
-            3 -> ParticipantsTab(
-                tripId = tripId,
-                uiState = participantsUiState,
-                currentUserRole = participantsUiState.currentUserRole,
-                canInvite = participantsUiState.canInviteParticipants,
-                onEmailChange = onParticipantEmailChange,
-                onRoleChange = onParticipantRoleChange,
-                onInviteClick = onInviteParticipantClick
+        /**
+         * Диалог подтверждения удаления.
+         *
+         * Он нужен, чтобы пользователь случайно не удалил поездку.
+         */
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                },
+                title = {
+                    Text("Удалить поездку?")
+                },
+                text = {
+                    Text("Это действие удалит поездку, маршрут, расходы, участников, приглашения и уведомления.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            onDeleteTripClick()
+                        }
+                    ) {
+                        Text("Удалить")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                        }
+                    ) {
+                        Text("Отмена")
+                    }
+                }
             )
         }
-    }
-    /**
-     * Диалог подтверждения удаления.
-     *
-     * Он нужен, чтобы пользователь случайно не удалил поездку.
-     */
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-            title = {
-                Text("Удалить поездку?")
-            },
-            text = {
-                Text("Это действие удалит поездку, маршрут, расходы, участников, приглашения и уведомления.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDeleteTripClick()
-                    }
-                ) {
-                    Text("Удалить")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Отмена")
-                }
-            }
-        )
     }
 }

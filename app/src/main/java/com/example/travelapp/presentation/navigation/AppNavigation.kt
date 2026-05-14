@@ -169,6 +169,7 @@ fun AppNavigation() {
                 onNameChange = authViewModel::updateName,
                 onEmailChange = authViewModel::updateEmail,
                 onPasswordChange = authViewModel::updatePassword,
+                onConfirmPasswordChange = authViewModel::updateConfirmPassword,
                 onRegisterClick = authViewModel::signUp,
                 onBackToLoginClick = {
                     navController.popBackStack()

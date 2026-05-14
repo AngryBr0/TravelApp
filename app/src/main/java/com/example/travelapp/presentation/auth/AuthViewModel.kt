@@ -44,6 +44,10 @@ class AuthViewModel(
         _uiState.value = _uiState.value.copy(password = password)
     }
 
+    fun updateConfirmPassword(confirmPassword: String) {
+        _uiState.value = _uiState.value.copy(confirmPassword = confirmPassword)
+    }
+
     fun updateName(name: String) {
         _uiState.value = _uiState.value.copy(name = name)
     }
@@ -95,6 +99,14 @@ class AuthViewModel(
                 isLoading = true,
                 errorMessage = null
             )
+
+            if (_uiState.value.password != _uiState.value.confirmPassword) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Пароли не совпадают"
+                )
+                return@launch
+            }
 
             val result = authRepository.signUp(
                 email = _uiState.value.email,

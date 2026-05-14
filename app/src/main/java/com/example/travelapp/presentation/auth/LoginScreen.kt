@@ -1,28 +1,46 @@
 package com.example.travelapp.presentation.auth
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travelapp.ui.theme.TravelAppTheme
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.travelapp.ui.components.AuthBackground
+import com.example.travelapp.ui.components.AuthErrorText
+import com.example.travelapp.ui.components.AuthHeader
+import com.example.travelapp.ui.components.AuthPrimaryButton
+import com.example.travelapp.ui.components.AuthSecondaryButton
+import com.example.travelapp.ui.components.AuthTextField
+import com.example.travelapp.ui.theme.TravelAppTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.VisualTransformation
 
 /**
- * Экран входа.
+ * LoginScreen — экран входа.
  *
- * Он только отображает интерфейс и вызывает функции,
- * которые приходят из ViewModel через параметры.
+ * Здесь нет Google-кнопки и нет "Забыли пароль?",
+ * потому что эта функциональность пока не реализована.
  */
 @Composable
 fun LoginScreen(
@@ -33,77 +51,113 @@ fun LoginScreen(
     onRegisterClick: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
-    /**
-     * Если ViewModel изменила isAuthorized на true,
-     * значит вход успешен, можно перейти на экран поездок.
-     */
+
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
     LaunchedEffect(uiState.isAuthorized) {
         if (uiState.isAuthorized) {
             onLoginSuccess()
         }
     }
-    Column(
+
+    AuthBackground(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Text(text = "Вход в приложение")
+        AuthHeader(
+            title = "Добро пожаловать"
+        )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-        OutlinedTextField(
+        Text(
+            text = "Войдите, чтобы продолжить",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        AuthTextField(
             value = uiState.email,
             onValueChange = onEmailChange,
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            label = "Email",
+            placeholder = "Введите email",
+            keyboardType = KeyboardType.Email
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        OutlinedTextField(
+        AuthTextField(
             value = uiState.password,
             onValueChange = onPasswordChange,
-            label = { Text("Пароль") },
-            modifier = Modifier.fillMaxWidth()
+            label = "Пароль",
+            placeholder = "Введите пароль",
+            keyboardType = KeyboardType.Password,
+            visualTransformation = if (isPasswordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
+            trailingIcon = {
+                IconButton(
+                    onClick = {
+                        isPasswordVisible = !isPasswordVisible
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) {
+                            Icons.Filled.VisibilityOff
+                        } else {
+                            Icons.Filled.Visibility
+                        },
+                        contentDescription = if (isPasswordVisible) {
+                            "Скрыть пароль"
+                        } else {
+                            "Показать пароль"
+                        }
+                    )
+                }
+            }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        if (uiState.errorMessage != null) {
-            Text(text = uiState.errorMessage)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        AuthErrorText(message = uiState.errorMessage)
 
-        Button(
+        Spacer(modifier = Modifier.height(28.dp))
+
+        AuthPrimaryButton(
+            text = "Войти",
             onClick = onLoginClick,
-            modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
-        ) {
-            Text("Войти")
-        }
+        )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        TextButton(
-            onClick = onRegisterClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Зарегистрироваться")
-        }
+        AuthSecondaryButton(
+            text = "Нет аккаунта? Зарегистрироваться",
+            onClick = onRegisterClick
+        )
 
         if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(20.dp))
+
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }
+
 @Preview(showBackground = true)
 @Composable
-fun LoginScreenPreview() {
+private fun LoginScreenPreview() {
     TravelAppTheme {
         LoginScreen(
             uiState = AuthUiState(
-                email = "test@example.com",
+                email = "denis@mail.ru",
                 password = "123456"
             ),
             onEmailChange = {},

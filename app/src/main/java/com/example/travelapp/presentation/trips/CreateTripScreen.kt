@@ -1,22 +1,24 @@
 package com.example.travelapp.presentation.trips
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import com.example.travelapp.ui.components.ErrorMessage
+import com.example.travelapp.ui.components.PrimaryButton
+import com.example.travelapp.ui.components.TravelCard
+import com.example.travelapp.ui.components.TravelScreen
+import com.example.travelapp.ui.components.TravelTextField
 
 /**
- * Экран создания новой поездки.
+ * CreateTripScreen — экран создания поездки.
  */
 @Composable
 fun CreateTripScreen(
@@ -29,84 +31,68 @@ fun CreateTripScreen(
     onBackClick: () -> Unit,
     onTripCreated: () -> Unit
 ) {
-    /**
-     * Если поездка успешно создана, возвращаемся на список поездок.
-     */
     LaunchedEffect(uiState.isCreated) {
         if (uiState.isCreated) {
             onTripCreated()
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "Создание поездки")
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = onBackClick,
-            modifier = Modifier.fillMaxWidth()
+    TravelScreen(
+        title = "Новая поездка",
+        onBackClick = onBackClick
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Назад")
-        }
-        Spacer(modifier = Modifier.height(24.dp))
+            item {
+                TravelCard {
+                    Text(
+                        text = "Основная информация",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-        OutlinedTextField(
-            value = uiState.title,
-            onValueChange = onTitleChange,
-            label = { Text("Название поездки") },
-            modifier = Modifier.fillMaxWidth()
-        )
+                    TravelTextField(
+                        value = uiState.title,
+                        onValueChange = onTitleChange,
+                        label = "Название поездки"
+                    )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    TravelTextField(
+                        value = uiState.description,
+                        onValueChange = onDescriptionChange,
+                        label = "Описание",
+                        singleLine = false
+                    )
 
-        OutlinedTextField(
-            value = uiState.description,
-            onValueChange = onDescriptionChange,
-            label = { Text("Описание") },
-            modifier = Modifier.fillMaxWidth()
-        )
+                    TravelTextField(
+                        value = uiState.startDate,
+                        onValueChange = onStartDateChange,
+                        label = "Дата начала"
+                    )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    TravelTextField(
+                        value = uiState.endDate,
+                        onValueChange = onEndDateChange,
+                        label = "Дата окончания"
+                    )
 
-        OutlinedTextField(
-            value = uiState.startDate,
-            onValueChange = onStartDateChange,
-            label = { Text("Дата начала") },
-            modifier = Modifier.fillMaxWidth()
-        )
+                    ErrorMessage(message = uiState.errorMessage)
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    PrimaryButton(
+                        text = "Создать поездку",
+                        onClick = onCreateClick,
+                        enabled = !uiState.isLoading
+                    )
 
-        OutlinedTextField(
-            value = uiState.endDate,
-            onValueChange = onEndDateChange,
-            label = { Text("Дата окончания") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.errorMessage != null) {
-            Text(text = uiState.errorMessage)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        Button(
-            onClick = onCreateClick,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        ) {
-            Text("Создать")
-        }
-
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator()
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
         }
     }
 }
