@@ -20,6 +20,7 @@ import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import com.yandex.mapkit.geometry.Polyline
+import androidx.compose.material3.Button
 /**
  * MapTab — вкладка карты.
  *
@@ -67,7 +68,22 @@ fun MapTab(
             text = "Карта маршрута",
             modifier = Modifier.padding(16.dp)
         )
+        val exporter = remember { YandexNavigatorExporter() }
 
+        Button(
+            onClick = {
+                exporter.openRouteInYandexNavigator(
+                    context = context,
+                    routePoints = routePoints
+                )
+            },
+            modifier = Modifier.padding(horizontal = 16.dp),
+            enabled = routePoints.size >= 2
+        ) {
+            Text("Открыть маршрут в Яндекс Навигаторе")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
         /**
          * Если точек маршрута нет, показываем подсказку.
          */

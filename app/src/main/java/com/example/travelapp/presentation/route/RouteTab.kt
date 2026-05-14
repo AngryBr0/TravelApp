@@ -1,7 +1,6 @@
 package com.example.travelapp.presentation.route
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travelapp.ui.theme.TravelAppTheme
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,16 +17,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.travelapp.data.model.RoutePoint
-import androidx.compose.foundation.clickable
 import com.example.travelapp.data.model.PlaceSearchResult
-
+import com.example.travelapp.data.model.RoutePoint
 
 /**
  * RouteTab — вкладка маршрута поездки.
  *
- * Пользователь ищет место через Яндекс,
- * выбирает результат и добавляет его в маршрут.
+ * Вся вкладка сделана через LazyColumn, чтобы экран можно было прокручивать.
+ * Это важно, потому что результатов поиска может быть много.
  */
 @Composable
 fun RouteTab(
@@ -41,45 +38,56 @@ fun RouteTab(
     onAddSelectedPlaceClick: () -> Unit,
     onDeletePointClick: (String) -> Unit
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(text = "Маршрут поездки")
+        item {
+            Text(text = "Маршрут поездки")
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         if (canEdit) {
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = onSearchQueryChange,
-                label = { Text("Найти место") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            item {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    label = { Text("Найти место") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onSearchClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isSearching
-            ) {
-                Text("Найти")
-            }
-
-            if (uiState.isSearching) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CircularProgressIndicator()
+
+                Button(
+                    onClick = onSearchClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isSearching
+                ) {
+                    Text("Найти")
+                }
+
+                if (uiState.isSearching) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator()
+                }
+
+                if (uiState.errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = uiState.errorMessage)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             if (uiState.searchResults.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Результаты поиска")
+                item {
+                    Text(text = "Результаты поиска")
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                uiState.searchResults.forEach { place ->
+                items(uiState.searchResults) { place ->
                     SearchResultCard(
                         place = place,
                         onClick = {
@@ -90,59 +98,69 @@ fun RouteTab(
             }
 
             if (uiState.selectedPlace != null) {
-                Spacer(modifier = Modifier.height(16.dp))
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Text(text = "Выбрано:")
-                Text(text = uiState.selectedPlace.title)
-                Text(text = uiState.selectedPlace.address)
+                    Text(text = "Выбрано:")
+                    Text(text = uiState.selectedPlace.title)
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.selectedPlace.address.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = uiState.selectedPlace.address)
+                    }
 
-                OutlinedTextField(
-                    value = uiState.description,
-                    onValueChange = onDescriptionChange,
-                    label = { Text("Заметка к месту") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.description,
+                        onValueChange = onDescriptionChange,
+                        label = { Text("Заметка к месту") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                Button(
-                    onClick = onAddSelectedPlaceClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
-                ) {
-                    Text("Добавить в маршрут")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = onAddSelectedPlaceClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Добавить в маршрут")
+                    }
+
+                    if (uiState.isLoading) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        CircularProgressIndicator()
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
             }
-
-            if (uiState.errorMessage != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = uiState.errorMessage)
-            }
         } else {
-            Text(text = "У вас режим просмотра. Редактирование маршрута недоступно.")
+            item {
+                Text(text = "У вас режим просмотра. Редактирование маршрута недоступно.")
+                Spacer(modifier = Modifier.height(20.dp))
+            }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(text = "Точки маршрута")
-
-        Spacer(modifier = Modifier.height(8.dp))
+        item {
+            Text(text = "Точки маршрута")
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         if (uiState.routePoints.isEmpty()) {
-            Text(text = "Пока точки маршрута не добавлены")
+            item {
+                Text(text = "Пока точки маршрута не добавлены")
+            }
         } else {
-            LazyColumn {
-                items(uiState.routePoints.sortedBy { it.order }) { point ->
-                    RoutePointCard(
-                        point = point,
-                        canDelete = canEdit,
-                        onDeleteClick = {
-                            onDeletePointClick(point.id)
-                        }
-                    )
-                }
+            items(uiState.routePoints.sortedBy { it.order }) { point ->
+                RoutePointCard(
+                    point = point,
+                    canDelete = canEdit,
+                    onDeleteClick = {
+                        onDeletePointClick(point.id)
+                    }
+                )
             }
         }
     }
@@ -150,6 +168,8 @@ fun RouteTab(
 
 /**
  * Карточка результата поиска.
+ *
+ * Пользователь нажимает на карточку, чтобы выбрать место.
  */
 @Composable
 private fun SearchResultCard(
@@ -173,6 +193,7 @@ private fun SearchResultCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
+
             Text(text = "Нажмите, чтобы выбрать")
         }
     }

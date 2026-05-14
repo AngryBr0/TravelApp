@@ -72,7 +72,9 @@ class YandexPlaceSearchRepository : PlaceSearchRepository {
                 )
             )
 
-            val searchOptions = SearchOptions()
+            val searchOptions = SearchOptions().apply {
+                resultPageSize = 10
+            }
 
             /**
              * submit запускает поисковый запрос.
