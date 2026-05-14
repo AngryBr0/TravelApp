@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.NotificationItem
-
+import androidx.compose.material3.Button
 /**
  * NotificationsScreen — экран уведомлений.
  *
@@ -24,7 +24,8 @@ import com.example.travelapp.data.model.NotificationItem
  */
 @Composable
 fun NotificationsScreen(
-    uiState: NotificationsUiState
+    uiState: NotificationsUiState,
+    onBackClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -32,7 +33,14 @@ fun NotificationsScreen(
             .padding(24.dp)
     ) {
         Text(text = "Уведомления")
+        Spacer(modifier = Modifier.height(12.dp))
 
+        Button(
+            onClick = onBackClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Назад")
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         when {

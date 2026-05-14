@@ -118,6 +118,9 @@ fun AppNavigation() {
 
             InvitationsScreen(
                 uiState = uiState,
+                onBackClick = {
+                    navController.popBackStack()
+                },
                 onAcceptClick = invitationsViewModel::acceptInvitation,
                 onDeclineClick = invitationsViewModel::declineInvitation
             )
@@ -235,7 +238,10 @@ fun AppNavigation() {
             }
 
             NotificationsScreen(
-                uiState = uiState
+                uiState = uiState,
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -258,6 +264,9 @@ fun AppNavigation() {
             ProfileScreen(
                 uiState = uiState,
                 onSignOutClick = profileViewModel::signOut,
+                onBackClick = {
+                    navController.popBackStack()
+                },
                 onSignedOut = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) {
@@ -286,6 +295,9 @@ fun AppNavigation() {
                 onStartDateChange = createTripViewModel::updateStartDate,
                 onEndDateChange = createTripViewModel::updateEndDate,
                 onCreateClick = createTripViewModel::createTrip,
+                onBackClick = {
+                    navController.popBackStack()
+                },
                 onTripCreated = {
                     navController.popBackStack()
                 }
@@ -360,9 +372,27 @@ fun AppNavigation() {
                 participantsViewModel.loadParticipants(tripId)
                 tripViewModel.loadTrip(tripId)
             }
-
+            /**
+             * Если поездка удалена, возвращаемся к списку поездок.
+             */
+            LaunchedEffect(tripUiState.isDeleted) {
+                if (tripUiState.isDeleted) {
+                    navController.popBackStack()
+                }
+            }
             TripScreen(
                 tripId = tripId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+
+                tripTitle = tripUiState.trip?.title.orEmpty(),
+                isDeletingTrip = tripUiState.isDeleting,
+                tripErrorMessage = tripUiState.errorMessage,
+                canDeleteTrip = participantsUiState.canInviteParticipants,
+                onDeleteTripClick = {
+                    tripViewModel.deleteTrip(tripId)
+                },
 
                 routeUiState = routeUiState,
                 onRouteTitleChange = routeViewModel::updateTitle,

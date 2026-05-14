@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * TripViewModel отвечает за загрузку данных одной конкретной поездки.
+ * TripViewModel отвечает за данные одной конкретной поездки.
  *
- * Сейчас она нужна, чтобы получить название поездки
- * при создании приглашения участника.
+ * Она:
+ * - загружает поездку по id;
+ * - хранит её состояние;
+ * - удаляет поездку по запросу организатора.
  */
 class TripViewModel(
     private val tripRepository: TripRepository
@@ -56,6 +58,39 @@ class TripViewModel(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Удаляет поездку.
+     *
+     * Проверка роли выполняется на уровне интерфейса:
+     * кнопку удаления видит только ORGANIZER.
+     */
+    fun deleteTrip(tripId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isDeleting = true,
+                errorMessage = null
+            )
+
+            when (val result = tripRepository.deleteTrip(tripId)) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        isDeleted = true
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
             }
         }
     }

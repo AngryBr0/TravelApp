@@ -30,6 +30,7 @@ import com.example.travelapp.ui.theme.TravelAppTheme
 @Composable
 fun InvitationsScreen(
     uiState: InvitationsUiState,
+    onBackClick: () -> Unit,
     onAcceptClick: (TripInvitation) -> Unit,
     onDeclineClick: (TripInvitation) -> Unit
 ) {
@@ -39,7 +40,14 @@ fun InvitationsScreen(
             .padding(24.dp)
     ) {
         Text(text = "Приглашения")
+        Spacer(modifier = Modifier.height(12.dp))
 
+        Button(
+            onClick = onBackClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Назад")
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         when {
@@ -137,6 +145,7 @@ private fun InvitationsScreenPreview() {
                     )
                 )
             ),
+            onBackClick = {},
             onAcceptClick = {},
             onDeclineClick = {}
         )

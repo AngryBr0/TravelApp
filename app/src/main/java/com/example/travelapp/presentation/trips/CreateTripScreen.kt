@@ -26,6 +26,7 @@ fun CreateTripScreen(
     onStartDateChange: (String) -> Unit,
     onEndDateChange: (String) -> Unit,
     onCreateClick: () -> Unit,
+    onBackClick: () -> Unit,
     onTripCreated: () -> Unit
 ) {
     /**
@@ -42,8 +43,16 @@ fun CreateTripScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
+        Spacer(modifier = Modifier.height(12.dp))
         Text(text = "Создание поездки")
+        Spacer(modifier = Modifier.height(12.dp))
 
+        Button(
+            onClick = onBackClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Назад")
+        }
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(

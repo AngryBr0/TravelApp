@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ProfileScreen(
     uiState: ProfileUiState,
+    onBackClick: () -> Unit,
     onSignOutClick: () -> Unit,
     onSignedOut: () -> Unit
 ) {
@@ -42,7 +43,14 @@ fun ProfileScreen(
             .padding(24.dp)
     ) {
         Text(text = "Профиль пользователя")
+        Spacer(modifier = Modifier.height(12.dp))
 
+        Button(
+            onClick = onBackClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Назад")
+        }
         Spacer(modifier = Modifier.height(24.dp))
 
         if (uiState.errorMessage != null) {

@@ -9,7 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-
+import com.google.firebase.firestore.CollectionReference
 /**
  * FirebaseTripRepository — реальная реализация TripRepository через Firestore.
  *
@@ -194,16 +194,42 @@ class FirebaseTripRepository(
     /**
      * Удаляет поездку из Firestore.
      *
-     * Пока удаляется только документ поездки.
-     * Позже, если нужно, можно отдельно удалять подколлекции:
+     * Важно:
+     * Firestore сам не удаляет подколлекции при удалении документа.
+     * Поэтому для прототипа мы вручную удаляем основные подколлекции:
      * routePoints, expenses, participants.
+     *
+     * Также удаляем приглашения и уведомления, связанные с поездкой.
      */
     override suspend fun deleteTrip(tripId: String): AppResult<Unit> {
         return try {
-            tripsCollection
-                .document(tripId)
-                .delete()
-                .await()
+            val tripDocument = tripsCollection.document(tripId)
+
+            deleteCollection(
+                tripDocument.collection("routePoints")
+            )
+
+            deleteCollection(
+                tripDocument.collection("expenses")
+            )
+
+            deleteCollection(
+                tripDocument.collection("participants")
+            )
+
+            deleteQueryResult(
+                collectionName = "invitations",
+                field = "tripId",
+                value = tripId
+            )
+
+            deleteQueryResult(
+                collectionName = "notifications",
+                field = "tripId",
+                value = tripId
+            )
+
+            tripDocument.delete().await()
 
             AppResult.Success(Unit)
         } catch (exception: Exception) {
@@ -243,5 +269,44 @@ class FirebaseTripRepository(
                 ?.filterIsInstance<String>()
                 ?: emptyList()
         )
+    }
+    /**
+     * Удаляет все документы из подколлекции.
+     *
+     * Для дипломного прототипа этого достаточно.
+     * В больших production-системах удаление больших коллекций
+     * обычно делают через Cloud Functions или серверный код.
+     */
+    private suspend fun deleteCollection(
+        collection: CollectionReference
+    ) {
+        val documents = collection.get().await().documents
+
+        documents.forEach { document ->
+            document.reference.delete().await()
+        }
+    }
+
+    /**
+     * Удаляет документы из коллекции по условию.
+     *
+     * Используется для удаления приглашений и уведомлений,
+     * связанных с удаляемой поездкой.
+     */
+    private suspend fun deleteQueryResult(
+        collectionName: String,
+        field: String,
+        value: String
+    ) {
+        val documents = firestore
+            .collection(collectionName)
+            .whereEqualTo(field, value)
+            .get()
+            .await()
+            .documents
+
+        documents.forEach { document ->
+            document.reference.delete().await()
+        }
     }
 }
