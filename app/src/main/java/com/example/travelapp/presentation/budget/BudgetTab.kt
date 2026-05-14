@@ -33,6 +33,7 @@ import com.example.travelapp.data.model.Expense
 fun BudgetTab(
     tripId: String,
     uiState: BudgetUiState,
+    canEdit: Boolean,
     onTitleChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onAmountChange: (String) -> Unit,
@@ -52,6 +53,7 @@ fun BudgetTab(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        if (canEdit) {
         OutlinedTextField(
             value = uiState.title,
             onValueChange = onTitleChange,
@@ -91,7 +93,9 @@ fun BudgetTab(
         ) {
             Text("Добавить расход")
         }
-
+        } else {
+            Text(text = "У вас режим просмотра. Редактирование бюджета недоступно.")
+        }
         if (uiState.isLoading) {
             Spacer(modifier = Modifier.height(12.dp))
             CircularProgressIndicator()
@@ -110,6 +114,7 @@ fun BudgetTab(
                 items(uiState.expenses) { expense ->
                     ExpenseCard(
                         expense = expense,
+                        canDelete = canEdit,
                         onDeleteClick = {
                             onDeleteExpenseClick(expense.id)
                         }
@@ -126,6 +131,7 @@ fun BudgetTab(
 @Composable
 private fun ExpenseCard(
     expense: Expense,
+    canDelete: Boolean,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -146,10 +152,12 @@ private fun ExpenseCard(
 
             Text(text = "Сумма: ${expense.amount} ₽")
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (canDelete) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Button(onClick = onDeleteClick) {
-                Text("Удалить")
+                Button(onClick = onDeleteClick) {
+                    Text("Удалить")
+                }
             }
         }
     }
@@ -179,7 +187,8 @@ private fun BudgetTabPreview() {
             onCategoryChange = {},
             onAmountChange = {},
             onAddExpenseClick = {},
-            onDeleteExpenseClick = {}
+            onDeleteExpenseClick = {},
+            canEdit = true
         )
     }
 }

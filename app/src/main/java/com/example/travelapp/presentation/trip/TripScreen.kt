@@ -86,6 +86,7 @@ fun TripScreen(
             0 -> RouteTab(
                 tripId = tripId,
                 uiState = routeUiState,
+                canEdit = participantsUiState.canEditTrip,
                 onTitleChange = onRouteTitleChange,
                 onAddressChange = onRouteAddressChange,
                 onDescriptionChange = onRouteDescriptionChange,
@@ -103,6 +104,7 @@ fun TripScreen(
             2 -> BudgetTab(
                 tripId = tripId,
                 uiState = budgetUiState,
+                canEdit = participantsUiState.canEditTrip,
                 onTitleChange = onBudgetTitleChange,
                 onCategoryChange = onBudgetCategoryChange,
                 onAmountChange = onBudgetAmountChange,
@@ -113,6 +115,8 @@ fun TripScreen(
             3 -> ParticipantsTab(
                 tripId = tripId,
                 uiState = participantsUiState,
+                currentUserRole = participantsUiState.currentUserRole,
+                canInvite = participantsUiState.canInviteParticipants,
                 onEmailChange = onParticipantEmailChange,
                 onRoleChange = onParticipantRoleChange,
                 onInviteClick = onInviteParticipantClick

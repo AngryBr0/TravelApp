@@ -32,6 +32,7 @@ import com.example.travelapp.data.model.RoutePoint
 fun RouteTab(
     tripId: String,
     uiState: RouteUiState,
+    canEdit: Boolean,
     onTitleChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
@@ -49,6 +50,7 @@ fun RouteTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        if (canEdit) {
         OutlinedTextField(
             value = uiState.title,
             onValueChange = onTitleChange,
@@ -106,6 +108,9 @@ fun RouteTab(
         ) {
             Text("Добавить точку маршрута")
         }
+        } else {
+            Text(text = "У вас режим просмотра. Редактирование маршрута недоступно.")
+        }
 
         if (uiState.isLoading) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -125,6 +130,7 @@ fun RouteTab(
                 items(uiState.routePoints) { point ->
                     RoutePointCard(
                         point = point,
+                        canDelete = canEdit,
                         onDeleteClick = {
                             onDeletePointClick(point.id)
                         }
@@ -141,6 +147,7 @@ fun RouteTab(
 @Composable
 private fun RoutePointCard(
     point: RoutePoint,
+    canDelete: Boolean,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -168,11 +175,12 @@ private fun RoutePointCard(
             Text(
                 text = "Координаты: ${point.latitude}, ${point.longitude}"
             )
+            if (canDelete) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(onClick = onDeleteClick) {
-                Text("Удалить")
+                Button(onClick = onDeleteClick) {
+                    Text("Удалить")
+                }
             }
         }
     }
@@ -211,7 +219,8 @@ private fun RouteTabPreview() {
             onLatitudeChange = {},
             onLongitudeChange = {},
             onAddPointClick = {},
-            onDeletePointClick = {}
+            onDeletePointClick = {},
+            canEdit = true
         )
     }
 }

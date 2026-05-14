@@ -70,9 +70,39 @@ class ParticipantsViewModel(
                     }
 
                     is AppResult.Success -> {
+                        val participants = result.data
+                        val currentUser = authRepository.getCurrentUser()
+
+                        /**
+                         * Находим роль текущего пользователя в этой поездке.
+                         *
+                         * Для организатора проверяем id.
+                         * Для приглашенного пользователя проверяем и id, и email,
+                         * потому что до принятия приглашения запись может быть связана с email,
+                         * а после принятия — с userId.
+                         */
+                        val normalizedEmail = currentUser?.email.orEmpty().trim().lowercase()
+
+                        val currentParticipant = participants.firstOrNull { participant ->
+                            participant.id == currentUser?.id ||
+                                    participant.email.trim().lowercase() == normalizedEmail
+                        }
+
+                        val currentRole = currentParticipant?.role ?: ParticipantRole.VIEWER
+
+                        val canEditTrip =
+                            currentRole == ParticipantRole.ORGANIZER ||
+                                    currentRole == ParticipantRole.EDITOR
+
+                        val canInviteParticipants =
+                            currentRole == ParticipantRole.ORGANIZER
+
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            participants = result.data,
+                            participants = participants,
+                            currentUserRole = currentRole,
+                            canEditTrip = canEditTrip,
+                            canInviteParticipants = canInviteParticipants,
                             errorMessage = null
                         )
                     }

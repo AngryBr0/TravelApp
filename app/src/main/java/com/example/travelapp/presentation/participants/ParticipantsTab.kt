@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.TripParticipant
+import com.example.travelapp.data.model.ParticipantRole
+import com.example.travelapp.data.model.ParticipantStatus
 
 /**
  * ParticipantsTab — вкладка участников поездки.
@@ -32,6 +34,8 @@ import com.example.travelapp.data.model.TripParticipant
 fun ParticipantsTab(
     tripId: String,
     uiState: ParticipantsUiState,
+    currentUserRole: ParticipantRole,
+    canInvite: Boolean,
     onEmailChange: (String) -> Unit,
     onRoleChange: (String) -> Unit,
     onInviteClick: () -> Unit
@@ -41,10 +45,16 @@ fun ParticipantsTab(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        Spacer(modifier = Modifier.height(12.dp))
+
         Text(text = "Участники поездки")
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        Text(text = "Ваша роль: $currentUserRole")
+
+        Spacer(modifier = Modifier.height(12.dp))
+        if (canInvite) {
         OutlinedTextField(
             value = uiState.email,
             onValueChange = onEmailChange,
@@ -74,6 +84,9 @@ fun ParticipantsTab(
             enabled = !uiState.isLoading
         ) {
             Text("Пригласить участника")
+        }
+        } else {
+            Text(text = "Приглашать участников может только организатор.")
         }
 
         if (uiState.isLoading) {
@@ -135,15 +148,68 @@ private fun ParticipantsTabPreview() {
             uiState = ParticipantsUiState(
                 participants = listOf(
                     TripParticipant(
-                        id = "1",
-                        email = "editor@example.com"
+                        id = "user-1",
+                        tripId = "trip-1",
+                        email = "organizer@example.com",
+                        role = ParticipantRole.ORGANIZER,
+                        status = ParticipantStatus.ACCEPTED
                     ),
                     TripParticipant(
-                        id = "2",
-                        email = "viewer@example.com"
+                        id = "user-2",
+                        tripId = "trip-1",
+                        email = "editor@example.com",
+                        role = ParticipantRole.EDITOR,
+                        status = ParticipantStatus.ACCEPTED
+                    ),
+                    TripParticipant(
+                        id = "user-3",
+                        tripId = "trip-1",
+                        email = "viewer@example.com",
+                        role = ParticipantRole.VIEWER,
+                        status = ParticipantStatus.INVITED
                     )
-                )
+                ),
+                currentUserRole = ParticipantRole.ORGANIZER,
+                canEditTrip = true,
+                canInviteParticipants = true
             ),
+            currentUserRole = ParticipantRole.ORGANIZER,
+            canInvite = true,
+            onEmailChange = {},
+            onRoleChange = {},
+            onInviteClick = {}
+        )
+    }
+}
+@Preview(showBackground = true)
+@Composable
+private fun ParticipantsTabViewerPreview() {
+    TravelAppTheme {
+        ParticipantsTab(
+            tripId = "trip-1",
+            uiState = ParticipantsUiState(
+                participants = listOf(
+                    TripParticipant(
+                        id = "user-1",
+                        tripId = "trip-1",
+                        email = "organizer@example.com",
+                        role = ParticipantRole.ORGANIZER,
+                        status = ParticipantStatus.ACCEPTED
+                    ),
+                    TripParticipant(
+                        id = "user-3",
+                        tripId = "trip-1",
+                        email = "viewer@example.com",
+                        role = ParticipantRole.VIEWER,
+                        status = ParticipantStatus.ACCEPTED
+                    )
+                ),
+                currentUserRole = ParticipantRole.VIEWER,
+                canEditTrip = false,
+                canInviteParticipants = false
+            ),
+            currentUserRole = ParticipantRole.VIEWER,
+            canInvite = false,
             onEmailChange = {},
             onRoleChange = {},
             onInviteClick = {}
