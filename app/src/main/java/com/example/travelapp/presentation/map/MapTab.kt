@@ -19,7 +19,7 @@ import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
-
+import com.yandex.mapkit.geometry.Polyline
 /**
  * MapTab — вкладка карты.
  *
@@ -98,9 +98,13 @@ fun MapTab(
                  */
                 mapObjects.clear()
 
-                val validPoints = routePoints.filter { point ->
-                    point.latitude != 0.0 || point.longitude != 0.0
-                }
+                val validPoints = routePoints
+                    .filter { point ->
+                        point.latitude != 0.0 || point.longitude != 0.0
+                    }
+                    .sortedBy { point ->
+                        point.order
+                    }
 
                 val imageProvider = ImageProvider.fromResource(
                     context,
@@ -116,7 +120,23 @@ fun MapTab(
                         imageProvider
                     )
                 }
+                /**
+                 * Рисуем линию маршрута между точками
+                 * в порядке их order.
+                 */
+                val polylinePoints = validPoints
+                    .sortedBy { routePoint ->
+                        routePoint.order
+                    }
+                    .map { routePoint ->
+                        Point(routePoint.latitude, routePoint.longitude)
+                    }
 
+                if (polylinePoints.size >= 2) {
+                    mapObjects.addPolyline(
+                        Polyline(polylinePoints)
+                    )
+                }
                 /**
                  * Если есть хотя бы одна точка,
                  * перемещаем камеру к первой точке маршрута.

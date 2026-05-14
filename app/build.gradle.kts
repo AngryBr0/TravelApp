@@ -88,5 +88,5 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 
-    implementation("com.yandex.android:maps.mobile:4.33.1-lite")
+    implementation("com.yandex.android:maps.mobile:4.36.0-full")
 }

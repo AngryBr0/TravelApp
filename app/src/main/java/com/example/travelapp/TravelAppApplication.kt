@@ -2,7 +2,6 @@ package com.example.travelapp
 
 import android.app.Application
 import com.yandex.mapkit.MapKitFactory
-
 /**
  * TravelAppApplication — класс приложения.
  *
@@ -21,5 +20,6 @@ class TravelAppApplication : Application() {
          * из local.properties. Так мы не храним ключ в GitHub.
          */
         MapKitFactory.setApiKey(BuildConfig.MAPKIT_API_KEY)
+        MapKitFactory.initialize(this)
     }
 }

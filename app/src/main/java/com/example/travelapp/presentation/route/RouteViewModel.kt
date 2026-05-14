@@ -1,36 +1,37 @@
 package com.example.travelapp.presentation.route
 
-import com.example.travelapp.data.model.NotificationItem
-import com.example.travelapp.data.repository.AuthRepository
-import com.example.travelapp.data.repository.NotificationRepository
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelapp.core.AppResult
+import com.example.travelapp.data.model.NotificationItem
+import com.example.travelapp.data.model.PlaceSearchResult
 import com.example.travelapp.data.model.RoutePoint
+import com.example.travelapp.data.repository.AuthRepository
+import com.example.travelapp.data.repository.NotificationRepository
+import com.example.travelapp.data.repository.PlaceSearchRepository
 import com.example.travelapp.data.repository.RouteRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * RouteViewModel отвечает за вкладку маршрута.
  *
- * Экран RouteTab не работает с репозиторием напрямую.
- * Он только передает действия пользователя во ViewModel.
- *
- * ViewModel:
- * - хранит состояние экрана;
- * - проверяет введенные данные;
- * - вызывает RouteRepository;
- * - обновляет список точек маршрута.
+ * Теперь логика такая:
+ * 1. Пользователь вводит запрос.
+ * 2. ViewModel вызывает PlaceSearchRepository.
+ * 3. Пользователь выбирает найденное место.
+ * 4. ViewModel превращает выбранное место в RoutePoint.
+ * 5. RoutePoint сохраняется в Firestore через RouteRepository.
  */
 class RouteViewModel(
     private val routeRepository: RouteRepository,
+    private val placeSearchRepository: PlaceSearchRepository,
     private val authRepository: AuthRepository,
     private val notificationRepository: NotificationRepository
 ) : ViewModel() {
@@ -38,41 +39,27 @@ class RouteViewModel(
     private val _uiState = MutableStateFlow(RouteUiState())
     val uiState: StateFlow<RouteUiState> = _uiState.asStateFlow()
 
-    /**
-     * Job нужен, чтобы не запускать несколько подписок на один и тот же маршрут.
-     */
     private var observeJob: Job? = null
 
-    fun updateTitle(title: String) {
-        _uiState.value = _uiState.value.copy(title = title)
-    }
-
-    fun updateAddress(address: String) {
-        _uiState.value = _uiState.value.copy(address = address)
+    fun updateSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(
+            searchQuery = query
+        )
     }
 
     fun updateDescription(description: String) {
-        _uiState.value = _uiState.value.copy(description = description)
-    }
-
-    fun updateLatitude(latitude: String) {
-        _uiState.value = _uiState.value.copy(latitude = latitude)
-    }
-
-    fun updateLongitude(longitude: String) {
-        _uiState.value = _uiState.value.copy(longitude = longitude)
+        _uiState.value = _uiState.value.copy(
+            description = description
+        )
     }
 
     /**
-     * Подписывается на список точек маршрута выбранной поездки.
+     * Загружает точки маршрута выбранной поездки.
      */
     fun loadRoutePoints(tripId: String) {
         observeJob?.cancel()
 
         observeJob = viewModelScope.launch {
-            /**
-             * загрузка
-             */
             routeRepository.observeRoutePoints(tripId).collect { result ->
                 when (result) {
                     AppResult.Loading -> {
@@ -85,7 +72,7 @@ class RouteViewModel(
                     is AppResult.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            routePoints = result.data,
+                            routePoints = result.data.sortedBy { it.order },
                             errorMessage = null
                         )
                     }
@@ -102,35 +89,80 @@ class RouteViewModel(
     }
 
     /**
-     * Добавляет точку маршрута.
+     * Ищет места через Яндекс.
      */
-    fun addRoutePoint(tripId: String) {
-        val state = _uiState.value
+    fun searchPlaces() {
+        val query = _uiState.value.searchQuery
 
-        if (state.title.isBlank()) {
-            _uiState.value = state.copy(
-                errorMessage = "Введите название точки маршрута"
+        if (query.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Введите название места"
             )
             return
         }
 
-        val latitude = state.latitude.toDoubleOrNull()
-        val longitude = state.longitude.toDoubleOrNull()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSearching = true,
+                errorMessage = null,
+                searchResults = emptyList(),
+                selectedPlace = null
+            )
 
-        if (latitude == null || longitude == null) {
+            when (val result = placeSearchRepository.searchPlaces(query)) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isSearching = false,
+                        searchResults = result.data,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isSearching = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
+    }
+
+    /**
+     * Выбирает место из результатов поиска.
+     */
+    fun selectPlace(place: PlaceSearchResult) {
+        _uiState.value = _uiState.value.copy(
+            selectedPlace = place,
+            searchResults = emptyList(),
+            errorMessage = null
+        )
+    }
+
+    /**
+     * Добавляет выбранное место в маршрут.
+     */
+    fun addSelectedPlaceToRoute(tripId: String) {
+        val state = _uiState.value
+        val selectedPlace = state.selectedPlace
+
+        if (selectedPlace == null) {
             _uiState.value = state.copy(
-                errorMessage = "Введите корректные координаты"
+                errorMessage = "Выберите место из результатов поиска"
             )
             return
         }
 
         val point = RoutePoint(
             tripId = tripId,
-            title = state.title,
-            address = state.address,
+            title = selectedPlace.title,
+            address = selectedPlace.address,
             description = state.description,
-            latitude = latitude,
-            longitude = longitude
+            latitude = selectedPlace.latitude,
+            longitude = selectedPlace.longitude,
+            order = state.routePoints.size + 1
         )
 
         viewModelScope.launch {
@@ -138,19 +170,18 @@ class RouteViewModel(
                 isLoading = true,
                 errorMessage = null
             )
-                /*добавление маршрута через интерфейс*/
 
             when (val result = routeRepository.addRoutePoint(tripId, point)) {
                 is AppResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        title = "",
-                        address = "",
+                        searchQuery = "",
+                        searchResults = emptyList(),
+                        selectedPlace = null,
                         description = "",
-                        latitude = "",
-                        longitude = "",
                         errorMessage = null
                     )
+
                     val userId = authRepository.getCurrentUserId()
 
                     if (userId != null) {
@@ -159,8 +190,7 @@ class RouteViewModel(
                                 userId = userId,
                                 tripId = tripId,
                                 text = "Добавлена точка маршрута: ${point.title}",
-                                createdAt = getCurrentDateTime(),
-                                createdAtMillis = System.currentTimeMillis()
+                                createdAt = getCurrentDateTime()
                             )
                         )
                     }
@@ -192,11 +222,7 @@ class RouteViewModel(
             )
         }
     }
-    /**
-     * Возвращает текущую дату и время в читаемом формате.
-     *
-     * Используется для отображения времени создания уведомления.
-     */
+
     private fun getCurrentDateTime(): String {
         return SimpleDateFormat(
             "dd.MM.yyyy HH:mm",

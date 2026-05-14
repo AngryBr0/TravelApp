@@ -19,26 +19,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.RoutePoint
+import androidx.compose.foundation.clickable
+import com.example.travelapp.data.model.PlaceSearchResult
+
 
 /**
  * RouteTab — вкладка маршрута поездки.
  *
- * Вкладка показывает:
- * - форму добавления точки маршрута;
- * - список уже добавленных точек;
- * - кнопку удаления точки.
+ * Пользователь ищет место через Яндекс,
+ * выбирает результат и добавляет его в маршрут.
  */
 @Composable
 fun RouteTab(
     tripId: String,
     uiState: RouteUiState,
     canEdit: Boolean,
-    onTitleChange: (String) -> Unit,
-    onAddressChange: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchClick: () -> Unit,
+    onPlaceClick: (PlaceSearchResult) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onLatitudeChange: (String) -> Unit,
-    onLongitudeChange: (String) -> Unit,
-    onAddPointClick: () -> Unit,
+    onAddSelectedPlaceClick: () -> Unit,
     onDeletePointClick: (String) -> Unit
 ) {
     Column(
@@ -51,70 +51,77 @@ fun RouteTab(
         Spacer(modifier = Modifier.height(12.dp))
 
         if (canEdit) {
-        OutlinedTextField(
-            value = uiState.title,
-            onValueChange = onTitleChange,
-            label = { Text("Название точки") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text("Найти место") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.address,
-            onValueChange = onAddressChange,
-            label = { Text("Адрес") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.description,
-            onValueChange = onDescriptionChange,
-            label = { Text("Описание") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.latitude,
-            onValueChange = onLatitudeChange,
-            label = { Text("Широта") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.longitude,
-            onValueChange = onLongitudeChange,
-            label = { Text("Долгота") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (uiState.errorMessage != null) {
-            Text(text = uiState.errorMessage)
             Spacer(modifier = Modifier.height(8.dp))
-        }
 
-        Button(
-            onClick = onAddPointClick,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        ) {
-            Text("Добавить точку маршрута")
-        }
+            Button(
+                onClick = onSearchClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isSearching
+            ) {
+                Text("Найти")
+            }
+
+            if (uiState.isSearching) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CircularProgressIndicator()
+            }
+
+            if (uiState.searchResults.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = "Результаты поиска")
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                uiState.searchResults.forEach { place ->
+                    SearchResultCard(
+                        place = place,
+                        onClick = {
+                            onPlaceClick(place)
+                        }
+                    )
+                }
+            }
+
+            if (uiState.selectedPlace != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(text = "Выбрано:")
+                Text(text = uiState.selectedPlace.title)
+                Text(text = uiState.selectedPlace.address)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = uiState.description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text("Заметка к месту") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onAddSelectedPlaceClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Добавить в маршрут")
+                }
+            }
+
+            if (uiState.errorMessage != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = uiState.errorMessage)
+            }
         } else {
             Text(text = "У вас режим просмотра. Редактирование маршрута недоступно.")
-        }
-
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(12.dp))
-            CircularProgressIndicator()
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -127,7 +134,7 @@ fun RouteTab(
             Text(text = "Пока точки маршрута не добавлены")
         } else {
             LazyColumn {
-                items(uiState.routePoints) { point ->
+                items(uiState.routePoints.sortedBy { it.order }) { point ->
                     RoutePointCard(
                         point = point,
                         canDelete = canEdit,
@@ -142,7 +149,37 @@ fun RouteTab(
 }
 
 /**
- * Карточка одной точки маршрута.
+ * Карточка результата поиска.
+ */
+@Composable
+private fun SearchResultCard(
+    place: PlaceSearchResult,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Text(text = place.title)
+
+            if (place.address.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = place.address)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "Нажмите, чтобы выбрать")
+        }
+    }
+}
+
+/**
+ * Карточка точки маршрута.
  */
 @Composable
 private fun RoutePointCard(
@@ -175,6 +212,7 @@ private fun RoutePointCard(
             Text(
                 text = "Координаты: ${point.latitude}, ${point.longitude}"
             )
+
             if (canDelete) {
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -185,6 +223,7 @@ private fun RoutePointCard(
         }
     }
 }
+/*
 @Preview(showBackground = true)
 @Composable
 private fun RouteTabPreview() {
@@ -213,14 +252,14 @@ private fun RouteTabPreview() {
                     )
                 )
             ),
-            onTitleChange = {},
-            onAddressChange = {},
             onDescriptionChange = {},
-            onLatitudeChange = {},
-            onLongitudeChange = {},
-            onAddPointClick = {},
             onDeletePointClick = {},
-            canEdit = true
+            canEdit = true,
+            onSearchQueryChange = {},
+            onSearchClick = {},
+            onPlaceClick = {},
+            onAddSelectedPlaceClick = {}
         )
     }
 }
+*/

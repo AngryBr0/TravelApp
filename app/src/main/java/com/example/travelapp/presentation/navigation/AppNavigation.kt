@@ -37,7 +37,7 @@ import com.example.travelapp.data.repository.impl.FirebaseInvitationRepository
 import com.example.travelapp.presentation.invitations.InvitationsScreen
 import com.example.travelapp.presentation.invitations.InvitationsViewModel
 import com.example.travelapp.presentation.trip.TripViewModel
-
+import com.example.travelapp.data.repository.impl.YandexPlaceSearchRepository
 /**
  * AppNavigation описывает навигацию между экранами приложения.
  *
@@ -92,8 +92,11 @@ fun AppNavigation() {
             firestore = FirebaseFirestore.getInstance()
         )
     }
+    val placeSearchRepository = remember {
+        YandexPlaceSearchRepository()
+    }
 
-    NavHost(
+        NavHost(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
@@ -315,6 +318,7 @@ fun AppNavigation() {
                     RouteViewModel(
                         routeRepository = routeRepository,
                         authRepository = authRepository,
+                        placeSearchRepository = placeSearchRepository,
                         notificationRepository = notificationRepository
                     )
                 }
@@ -395,13 +399,12 @@ fun AppNavigation() {
                 },
 
                 routeUiState = routeUiState,
-                onRouteTitleChange = routeViewModel::updateTitle,
-                onRouteAddressChange = routeViewModel::updateAddress,
+                onRouteSearchQueryChange = routeViewModel::updateSearchQuery,
+                onRouteSearchClick = routeViewModel::searchPlaces,
+                onRoutePlaceClick = routeViewModel::selectPlace,
                 onRouteDescriptionChange = routeViewModel::updateDescription,
-                onRouteLatitudeChange = routeViewModel::updateLatitude,
-                onRouteLongitudeChange = routeViewModel::updateLongitude,
-                onAddRoutePointClick = {
-                    routeViewModel.addRoutePoint(tripId)
+                onAddSelectedPlaceClick = {
+                    routeViewModel.addSelectedPlaceToRoute(tripId)
                 },
                 onDeleteRoutePointClick = { pointId ->
                     routeViewModel.deleteRoutePoint(

@@ -28,7 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-
+import com.example.travelapp.data.model.PlaceSearchResult
 /**
  * TripScreen — экран конкретной поездки.
  *
@@ -53,12 +53,11 @@ fun TripScreen(
     onDeleteTripClick: () -> Unit,
 
     routeUiState: RouteUiState,
-    onRouteTitleChange: (String) -> Unit,
-    onRouteAddressChange: (String) -> Unit,
+    onRouteSearchQueryChange: (String) -> Unit,
+    onRouteSearchClick: () -> Unit,
+    onRoutePlaceClick: (PlaceSearchResult) -> Unit,
     onRouteDescriptionChange: (String) -> Unit,
-    onRouteLatitudeChange: (String) -> Unit,
-    onRouteLongitudeChange: (String) -> Unit,
-    onAddRoutePointClick: () -> Unit,
+    onAddSelectedPlaceClick: () -> Unit,
     onDeleteRoutePointClick: (String) -> Unit,
 
     budgetUiState: BudgetUiState,
@@ -149,15 +148,13 @@ fun TripScreen(
                 tripId = tripId,
                 uiState = routeUiState,
                 canEdit = participantsUiState.canEditTrip,
-                onTitleChange = onRouteTitleChange,
-                onAddressChange = onRouteAddressChange,
+                onSearchQueryChange = onRouteSearchQueryChange,
+                onSearchClick = onRouteSearchClick,
+                onPlaceClick = onRoutePlaceClick,
                 onDescriptionChange = onRouteDescriptionChange,
-                onLatitudeChange = onRouteLatitudeChange,
-                onLongitudeChange = onRouteLongitudeChange,
-                onAddPointClick = onAddRoutePointClick,
+                onAddSelectedPlaceClick = onAddSelectedPlaceClick,
                 onDeletePointClick = onDeleteRoutePointClick
             )
-
             1 -> MapTab(
                 tripId = tripId,
                 routePoints = routeUiState.routePoints
