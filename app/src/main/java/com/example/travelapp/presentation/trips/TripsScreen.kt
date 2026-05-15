@@ -14,8 +14,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.Trip
 import com.example.travelapp.data.model.TripStatus
-import com.example.travelapp.ui.components.EmptyState
-import com.example.travelapp.ui.components.ErrorMessage
+import com.example.travelapp.ui.components.AppEmptyState
+import com.example.travelapp.ui.components.AppErrorMessage
 import com.example.travelapp.ui.components.TripHomeCard
 import com.example.travelapp.ui.components.TripsHomeScaffold
 import com.example.travelapp.ui.theme.TravelAppTheme
@@ -56,13 +56,13 @@ fun TripsScreen(
 
                 uiState.errorMessage != null -> {
                     item {
-                        ErrorMessage(message = uiState.errorMessage)
+                        AppErrorMessage(message = uiState.errorMessage)
                     }
                 }
 
                 uiState.trips.isEmpty() -> {
                     item {
-                        EmptyState(
+                        AppEmptyState(
                             text = "У вас пока нет поездок. Нажмите на плюс, чтобы создать первую поездку."
                         )
                     }

@@ -1,63 +1,73 @@
 package com.example.travelapp.presentation.notifications
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.travelapp.data.model.NotificationItem
-import androidx.compose.material3.Button
+import com.example.travelapp.ui.components.AppCard
+import com.example.travelapp.ui.components.AppEmptyState
+import com.example.travelapp.ui.components.AppErrorMessage
+import com.example.travelapp.ui.components.AppMutedText
+import com.example.travelapp.ui.components.AppScaffold
+import com.example.travelapp.ui.theme.TravelAppTheme
+import com.example.travelapp.ui.components.MainTabScaffold
+import com.example.travelapp.ui.components.TripsBottomItem
 /**
  * NotificationsScreen — экран уведомлений.
- *
- * Здесь пользователь видит события, связанные с поездками:
- * добавление точек маршрута, расходов и участников.
  */
 @Composable
 fun NotificationsScreen(
     uiState: NotificationsUiState,
-    onBackClick: () -> Unit
+    onTripsClick: () -> Unit,
+    onInvitationsClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text(text = "Уведомления")
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = onBackClick,
-            modifier = Modifier.fillMaxWidth()
+    MainTabScaffold(
+        title = "Уведомления",
+        selectedItem = TripsBottomItem.NOTIFICATIONS,
+        onTripsClick = onTripsClick,
+        onInvitationsClick = onInvitationsClick,
+        onNotificationsClick = onNotificationsClick,
+        onProfileClick = onProfileClick
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Назад")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+            when {
+                uiState.isLoading -> {
+                    item {
+                        CircularProgressIndicator()
+                    }
+                }
 
-        when {
-            uiState.isLoading -> {
-                CircularProgressIndicator()
-            }
+                uiState.errorMessage != null -> {
+                    item {
+                        AppErrorMessage(message = uiState.errorMessage)
+                    }
+                }
 
-            uiState.errorMessage != null -> {
-                Text(text = uiState.errorMessage)
-            }
+                uiState.notifications.isEmpty() -> {
+                    item {
+                        AppEmptyState(
+                            text = "Пока уведомлений нет."
+                        )
+                    }
+                }
 
-            uiState.notifications.isEmpty() -> {
-                Text(text = "Пока уведомлений нет")
-            }
-
-            else -> {
-                LazyColumn {
+                else -> {
                     items(uiState.notifications) { notification ->
                         NotificationCard(notification = notification)
                     }
@@ -68,25 +78,52 @@ fun NotificationsScreen(
 }
 
 /**
- * Карточка одного уведомления.
+ * Карточка уведомления.
  */
 @Composable
 private fun NotificationCard(
     notification: NotificationItem
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(text = notification.text)
+    AppCard {
+        Text(
+            text = notification.text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold
+        )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(text = notification.createdAt)
+        if (notification.createdAt.isNotBlank()) {
+            AppMutedText(text = notification.createdAt)
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NotificationsScreenPreview() {
+    TravelAppTheme {
+        NotificationsScreen(
+            uiState = NotificationsUiState(
+                notifications = listOf(
+                    NotificationItem(
+                        id = "1",
+                        userId = "user-1",
+                        tripId = "trip-1",
+                        text = "Добавлена точка маршрута: Казанский собор",
+                        createdAt = "12.05.2026 15:10"
+                    ),
+                    NotificationItem(
+                        id = "2",
+                        userId = "user-1",
+                        tripId = "trip-1",
+                        text = "Приглашён участник: friend@mail.ru",
+                        createdAt = "12.05.2026 14:40"
+                    )
+                )
+            ),
+            onTripsClick = {},
+            onInvitationsClick = {},
+            onNotificationsClick = {},
+            onProfileClick = {}
+        )
     }
 }

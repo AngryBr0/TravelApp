@@ -40,8 +40,87 @@ class ProfileViewModel(
         _uiState.value = ProfileUiState(
             userId = user.id,
             email = user.email,
-            name = user.name
+            name = user.name,
+            editableName = user.name,
+            editableEmail = user.email
         )
+    }
+    fun startEditing() {
+        val state = _uiState.value
+
+        _uiState.value = state.copy(
+            isEditing = true,
+            editableName = state.name,
+            editableEmail = state.email,
+            errorMessage = null
+        )
+    }
+
+    fun cancelEditing() {
+        val state = _uiState.value
+
+        _uiState.value = state.copy(
+            isEditing = false,
+            editableName = state.name,
+            editableEmail = state.email,
+            errorMessage = null
+        )
+    }
+
+    fun updateEditableName(name: String) {
+        _uiState.value = _uiState.value.copy(
+            editableName = name
+        )
+    }
+
+    fun updateEditableEmail(email: String) {
+        _uiState.value = _uiState.value.copy(
+            editableEmail = email
+        )
+    }
+
+    /**
+     * Сохраняет изменения профиля.
+     */
+    fun saveProfile() {
+        val state = _uiState.value
+
+        viewModelScope.launch {
+            _uiState.value = state.copy(
+                isSaving = true,
+                errorMessage = null
+            )
+
+            when (
+                val result = authRepository.updateProfile(
+                    name = state.editableName,
+                    email = state.editableEmail
+                )
+            ) {
+                is AppResult.Success -> {
+                    val user = result.data
+
+                    _uiState.value = _uiState.value.copy(
+                        name = user.name,
+                        email = user.email,
+                        editableName = user.name,
+                        editableEmail = user.email,
+                        isEditing = false,
+                        isSaving = false,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
     }
 
     /**

@@ -169,38 +169,6 @@ fun TravelTextField(
 }
 
 /**
- * ErrorMessage — единый вид ошибок.
- */
-@Composable
-fun ErrorMessage(
-    message: String?
-) {
-    if (message != null) {
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
-
-/**
- * EmptyState — сообщение, когда данных нет.
- */
-@Composable
-fun EmptyState(
-    text: String
-) {
-    TravelCard {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-/**
  * VerticalSpace — короткий helper для отступов.
  */
 @Composable

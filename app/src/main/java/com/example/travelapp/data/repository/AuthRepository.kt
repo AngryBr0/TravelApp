@@ -36,6 +36,13 @@ interface AuthRepository {
     suspend fun signOut(): AppResult<Unit>
 
     /**
+     * Обновить имя и email текущего пользователя.
+     */
+    suspend fun updateProfile(
+        name: String,
+        email: String
+    ): AppResult<User>
+    /**
      * Получить id текущего пользователя.
      *
      * Если пользователь не авторизован, вернется null.

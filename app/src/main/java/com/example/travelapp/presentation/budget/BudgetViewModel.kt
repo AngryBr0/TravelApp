@@ -9,7 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelapp.core.AppResult
 import com.example.travelapp.data.model.Expense
-import com.example.travelapp.data.model.ExpenseCategory
 import com.example.travelapp.data.repository.AuthRepository
 import com.example.travelapp.data.repository.ExpenseRepository
 import kotlinx.coroutines.Job
@@ -17,7 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
+import com.example.travelapp.data.model.ExpenseCategory
 /**
  * BudgetViewModel отвечает за вкладку бюджета.
  *
@@ -44,17 +43,28 @@ class BudgetViewModel(
     private var observeJob: Job? = null
 
     fun updateTitle(title: String) {
-        _uiState.value = _uiState.value.copy(title = title)
+        _uiState.value = _uiState.value.copy(
+            title = title,
+            errorMessage = null,
+            isExpenseAdded = false
+        )
     }
 
-    fun updateCategory(category: String) {
-        _uiState.value = _uiState.value.copy(category = category)
+    fun updateCategory(category: ExpenseCategory) {
+        _uiState.value = _uiState.value.copy(
+            selectedCategory = category,
+            errorMessage = null,
+            isExpenseAdded = false
+        )
     }
 
     fun updateAmount(amount: String) {
-        _uiState.value = _uiState.value.copy(amount = amount)
+        _uiState.value = _uiState.value.copy(
+            amount = amount,
+            errorMessage = null,
+            isExpenseAdded = false
+        )
     }
-
     /**
      * Загружает расходы выбранной поездки.
      */
@@ -102,19 +112,15 @@ class BudgetViewModel(
     fun addExpense(tripId: String) {
         val state = _uiState.value
 
-        if (state.title.isBlank()) {
-            _uiState.value = state.copy(
-                errorMessage = "Введите название расхода"
-            )
-            return
-        }
-
         val amount = state.amount
             .replace(",", ".")
             .toDoubleOrNull()
 
+
         if (amount == null || amount <= 0.0) {
             _uiState.value = state.copy(
+                isLoading = false,
+                isExpenseAdded = false,
                 errorMessage = "Введите корректную сумму"
             )
             return
@@ -129,15 +135,16 @@ class BudgetViewModel(
             return
         }
 
+        val expenseDescription = state.title.trim()
+
         val expense = Expense(
             tripId = tripId,
-            title = state.title,
-            category = parseCategory(state.category),
+            title = expenseDescription,
+            category = state.selectedCategory,
             amount = amount,
             userId = userId,
-            date = ""
+            date = getCurrentDateTime()
         )
-
         viewModelScope.launch {
             _uiState.value = state.copy(
                 isLoading = true,
@@ -149,10 +156,12 @@ class BudgetViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         title = "",
-                        category = "",
                         amount = "",
-                        errorMessage = null
+                        selectedCategory = ExpenseCategory.FOOD,
+                        errorMessage = null,
+                        isExpenseAdded = true
                     )
+
                     val userId = authRepository.getCurrentUserId()
 
                     if (userId != null) {
@@ -160,9 +169,8 @@ class BudgetViewModel(
                             NotificationItem(
                                 userId = userId,
                                 tripId = tripId,
-                                text = "Добавлен расход: ${expense.title} — ${expense.amount} ₽",
-                                createdAt = getCurrentDateTime(),
-                                createdAtMillis = System.currentTimeMillis()
+                                text = "Добавлен расход: ${expense.category.displayName} — ${expense.amount} ₽",
+                                createdAt = getCurrentDateTime()
                             )
                         )
                     }
@@ -218,5 +226,16 @@ class BudgetViewModel(
             "dd.MM.yyyy HH:mm",
             Locale.getDefault()
         ).format(Date())
+    }
+    /**
+     * Сбрасывает одноразовый флаг успешного добавления расхода.
+     *
+     * UI вызывает эту функцию после закрытия bottom sheet,
+     * чтобы окно не закрывалось повторно при следующей перерисовке.
+     */
+    fun consumeExpenseAddedEvent() {
+        _uiState.value = _uiState.value.copy(
+            isExpenseAdded = false
+        )
     }
 }

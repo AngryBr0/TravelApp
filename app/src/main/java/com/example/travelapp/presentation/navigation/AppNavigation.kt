@@ -51,6 +51,15 @@ import com.example.travelapp.data.repository.impl.YandexPlaceSearchRepository
 fun AppNavigation() {
     val navController = rememberNavController()
 
+    fun navigateRoot(route: String) {
+        navController.navigate(route) {
+            popUpTo(Screen.Trips.route) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
     /**
      * remember нужен, чтобы репозитории не создавались заново
      * при каждой перерисовке интерфейса.
@@ -121,8 +130,17 @@ fun AppNavigation() {
 
             InvitationsScreen(
                 uiState = uiState,
-                onBackClick = {
-                    navController.popBackStack()
+                onTripsClick = {
+                    navigateRoot(Screen.Trips.route)
+                },
+                onInvitationsClick = {
+                    navigateRoot(Screen.Invitations.route)
+                },
+                onNotificationsClick = {
+                    navigateRoot(Screen.Notifications.route)
+                },
+                onProfileClick = {
+                    navigateRoot(Screen.Profile.route)
                 },
                 onAcceptClick = invitationsViewModel::acceptInvitation,
                 onDeclineClick = invitationsViewModel::declineInvitation
@@ -205,14 +223,14 @@ fun AppNavigation() {
                 onCreateTripClick = {
                     navController.navigate(Screen.CreateTrip.route)
                 },
+                onInvitationsClick = {
+                    navigateRoot(Screen.Invitations.route)
+                },
                 onNotificationsClick = {
-                    navController.navigate(Screen.Notifications.route)
+                    navigateRoot(Screen.Notifications.route)
                 },
                 onProfileClick = {
-                    navController.navigate(Screen.Profile.route)
-                },
-                onInvitationsClick = {
-                    navController.navigate(Screen.Invitations.route)
+                    navigateRoot(Screen.Profile.route)
                 },
                 onTripClick = { trip ->
                     navController.navigate(
@@ -243,8 +261,17 @@ fun AppNavigation() {
 
             NotificationsScreen(
                 uiState = uiState,
-                onBackClick = {
-                    navController.popBackStack()
+                onTripsClick = {
+                    navigateRoot(Screen.Trips.route)
+                },
+                onInvitationsClick = {
+                    navigateRoot(Screen.Invitations.route)
+                },
+                onNotificationsClick = {
+                    navigateRoot(Screen.Notifications.route)
+                },
+                onProfileClick = {
+                    navigateRoot(Screen.Profile.route)
                 }
             )
         }
@@ -267,10 +294,24 @@ fun AppNavigation() {
 
             ProfileScreen(
                 uiState = uiState,
-                onSignOutClick = profileViewModel::signOut,
-                onBackClick = {
-                    navController.popBackStack()
+                onTripsClick = {
+                    navigateRoot(Screen.Trips.route)
                 },
+                onInvitationsClick = {
+                    navigateRoot(Screen.Invitations.route)
+                },
+                onNotificationsClick = {
+                    navigateRoot(Screen.Notifications.route)
+                },
+                onProfileClick = {
+                    navigateRoot(Screen.Profile.route)
+                },
+                onEditClick = profileViewModel::startEditing,
+                onCancelEditClick = profileViewModel::cancelEditing,
+                onSaveProfileClick = profileViewModel::saveProfile,
+                onNameChange = profileViewModel::updateEditableName,
+                onEmailChange = profileViewModel::updateEditableEmail,
+                onSignOutClick = profileViewModel::signOut,
                 onSignedOut = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) {
@@ -433,6 +474,7 @@ fun AppNavigation() {
                 onAddExpenseClick = {
                     budgetViewModel.addExpense(tripId)
                 },
+                onExpenseAddedHandled = budgetViewModel::consumeExpenseAddedEvent,
                 onDeleteExpenseClick = { expenseId ->
                     budgetViewModel.deleteExpense(
                         tripId = tripId,
@@ -443,13 +485,12 @@ fun AppNavigation() {
                 participantsUiState = participantsUiState,
                 onParticipantEmailChange = participantsViewModel::updateEmail,
                 onParticipantRoleChange = participantsViewModel::updateRole,
-                onInviteParticipantClick = {
-                    participantsViewModel.inviteParticipant(
-                        tripId = tripId,
-                        tripTitle = tripUiState.trip?.title.orEmpty()
-                    )
-                }
-            )
+            ) {
+                participantsViewModel.inviteParticipant(
+                    tripId = tripId,
+                    tripTitle = tripUiState.trip?.title.orEmpty()
+                )
+            }
         }
     }
 }

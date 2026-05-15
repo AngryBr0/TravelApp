@@ -119,7 +119,60 @@ class FirebaseAuthRepository(
             )
         }
     }
+    /**
+     * Обновляет имя и email пользователя.
+     *
+     * Имя обновляется в FirebaseAuth displayName и в Firestore users.
+     * Email обновляется в FirebaseAuth и в Firestore.
+     */
+    override suspend fun updateProfile(
+        name: String,
+        email: String
+    ): AppResult<User> {
+        return try {
+            val firebaseUser = firebaseAuth.currentUser
+                ?: return AppResult.Error("Пользователь не авторизован")
 
+            val normalizedName = name.trim()
+            val normalizedEmail = email.trim().lowercase()
+
+            if (normalizedName.isBlank()) {
+                return AppResult.Error("Введите имя")
+            }
+
+            if (normalizedEmail.isBlank() || !normalizedEmail.contains("@")) {
+                return AppResult.Error("Введите корректный email")
+            }
+
+            val profileUpdates = userProfileChangeRequest {
+                displayName = normalizedName
+            }
+
+            firebaseUser.updateProfile(profileUpdates).await()
+
+            if (firebaseUser.email.orEmpty().lowercase() != normalizedEmail) {
+                firebaseUser.updateEmail(normalizedEmail).await()
+            }
+
+            val updatedUser = User(
+                id = firebaseUser.uid,
+                email = normalizedEmail,
+                name = normalizedName
+            )
+
+            firestore
+                .collection("users")
+                .document(updatedUser.id)
+                .set(updatedUser)
+                .await()
+
+            AppResult.Success(updatedUser)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка обновления профиля"
+            )
+        }
+    }
     /**
      * Выход из аккаунта.
      */

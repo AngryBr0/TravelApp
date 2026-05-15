@@ -1,35 +1,61 @@
 package com.example.travelapp.presentation.participants
 
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.travelapp.ui.theme.TravelAppTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.travelapp.data.model.TripParticipant
 import com.example.travelapp.data.model.ParticipantRole
 import com.example.travelapp.data.model.ParticipantStatus
+import com.example.travelapp.data.model.TripParticipant
+import com.example.travelapp.ui.components.AppCard
+import com.example.travelapp.ui.components.AppEmptyState
+import com.example.travelapp.ui.components.AppErrorMessage
+import com.example.travelapp.ui.components.AppMutedText
+import com.example.travelapp.ui.components.AppPrimaryButton
+import com.example.travelapp.ui.components.AppSectionTitle
+import com.example.travelapp.ui.components.AppTextField
+import com.example.travelapp.ui.theme.TravelAppTheme
+import androidx.compose.foundation.layout.fillMaxSize
 
 /**
  * ParticipantsTab — вкладка участников поездки.
  *
- * Вкладка показывает:
- * - форму приглашения участника;
- * - список участников;
- * - роль и статус каждого участника.
+ * Здесь пользователь видит список участников и свою роль.
+ * Организатор может пригласить нового участника через нижнее всплывающее окно.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParticipantsTab(
     tripId: String,
@@ -40,105 +66,319 @@ fun ParticipantsTab(
     onRoleChange: (String) -> Unit,
     onInviteClick: () -> Unit
 ) {
+    val isInviteSheetVisible = remember {
+        mutableStateOf(false)
+    }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                AppCard {
+                    AppSectionTitle(text = "Участники поездки")
+
+                    Text(
+                        text = "Ваша роль: ${roleText(currentUserRole)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    AppMutedText(
+                        text = roleDescription(currentUserRole)
+                    )
+
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator()
+                    }
+
+                    AppErrorMessage(message = uiState.errorMessage)
+                }
+            }
+
+            item {
+                AppSectionTitle(text = "Список участников")
+            }
+
+            if (uiState.participants.isEmpty()) {
+                item {
+                    AppEmptyState(text = "Пока участники не добавлены.")
+                }
+            } else {
+                items(uiState.participants) { participant ->
+                    ParticipantRow(participant = participant)
+                }
+            }
+        }
+
+        if (canInvite) {
+            Button(
+                onClick = {
+                    isInviteSheetVisible.value = true
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 10.dp)
+                    .height(42.dp)
+                    .width(210.dp),
+                shape = RoundedCornerShape(21.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2563EB),
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.GroupAdd,
+                    contentDescription = "Пригласить",
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+
+                Text(
+                    text = "Пригласить",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+
+    if (isInviteSheetVisible.value) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                isInviteSheetVisible.value = false
+            },
+            sheetState = sheetState
+        ) {
+            InviteParticipantSheetContent(
+                uiState = uiState,
+                onEmailChange = onEmailChange,
+                onRoleChange = onRoleChange,
+                onInviteClick = {
+                    onInviteClick()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Содержимое bottom sheet для приглашения участника.
+ */
+@Composable
+private fun InviteParticipantSheetContent(
+    uiState: ParticipantsUiState,
+    onEmailChange: (String) -> Unit,
+    onRoleChange: (String) -> Unit,
+    onInviteClick: () -> Unit
+) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+            .fillMaxWidth()
+            .padding(
+                start = 18.dp,
+                end = 18.dp,
+                bottom = 28.dp
+            ),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        AppSectionTitle(text = "Пригласить участника")
 
-        Text(text = "Участники поездки")
+        AppMutedText(
+            text = "Введите email пользователя и выберите его роль в поездке."
+        )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(text = "Ваша роль: $currentUserRole")
-
-        Spacer(modifier = Modifier.height(12.dp))
-        if (canInvite) {
-        OutlinedTextField(
+        AppTextField(
             value = uiState.email,
             onValueChange = onEmailChange,
-            label = { Text("Email участника") },
-            modifier = Modifier.fillMaxWidth()
+            label = "Email",
+            placeholder = "Например: friend@mail.ru"
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.role,
-            onValueChange = onRoleChange,
-            label = { Text("Роль: viewer, editor, organizer") },
-            modifier = Modifier.fillMaxWidth()
+        ParticipantRoleDropdown(
+            selectedRoleText = uiState.role,
+            onRoleSelected = onRoleChange
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        AppErrorMessage(message = uiState.errorMessage)
 
-        if (uiState.errorMessage != null) {
-            Text(text = uiState.errorMessage)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Button(
+        AppPrimaryButton(
+            text = "Отправить приглашение",
             onClick = onInviteClick,
-            modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
-        ) {
-            Text("Пригласить участника")
-        }
-        } else {
-            Text(text = "Приглашать участников может только организатор.")
-        }
+        )
 
         if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(12.dp))
             CircularProgressIndicator()
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(20.dp))
+/**
+ * Выпадающий список ролей.
+ *
+ * ORGANIZER не даём выбрать при приглашении,
+ * потому что организатором является создатель поездки.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ParticipantRoleDropdown(
+    selectedRoleText: String,
+    onRoleSelected: (String) -> Unit
+) {
+    val expanded = remember {
+        mutableStateOf(false)
+    }
 
-        Text(text = "Список участников")
+    val roles = listOf(
+        ParticipantRole.EDITOR,
+        ParticipantRole.VIEWER
+    )
 
-        Spacer(modifier = Modifier.height(8.dp))
+    val selectedRole = roles.firstOrNull { role ->
+        role.name.lowercase() == selectedRoleText.lowercase()
+    } ?: ParticipantRole.VIEWER
 
-        if (uiState.participants.isEmpty()) {
-            Text(text = "Пока участники не добавлены")
-        } else {
-            LazyColumn {
-                items(uiState.participants) { participant ->
-                    ParticipantCard(participant = participant)
-                }
+    ExposedDropdownMenuBox(
+        expanded = expanded.value,
+        onExpandedChange = {
+            expanded.value = !expanded.value
+        }
+    ) {
+        OutlinedTextField(
+            value = roleText(selectedRole),
+            onValueChange = {},
+            readOnly = true,
+            label = {
+                Text("Роль")
+            },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded.value
+                )
+            },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = {
+                expanded.value = false
+            }
+        ) {
+            roles.forEach { role ->
+                DropdownMenuItem(
+                    text = {
+                        Text(roleText(role))
+                    },
+                    onClick = {
+                        onRoleSelected(role.name.lowercase())
+                        expanded.value = false
+                    }
+                )
             }
         }
     }
 }
 
 /**
- * Карточка одного участника поездки.
+ * Компактная строка участника.
  */
 @Composable
-private fun ParticipantCard(
+private fun ParticipantRow(
     participant: TripParticipant
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+    AppCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = participant.email)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = participant.email.ifBlank { "Пользователь" },
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
 
-            Spacer(modifier = Modifier.height(4.dp))
+                AppMutedText(
+                    text = roleText(participant.role)
+                )
+            }
 
-            Text(text = "Роль: ${participant.role}")
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(text = "Статус: ${participant.status}")
+            ParticipantStatusPill(
+                status = participant.status
+            )
         }
     }
 }
+
+/**
+ * Плашка статуса участника.
+ */
+@Composable
+private fun ParticipantStatusPill(
+    status: ParticipantStatus
+) {
+    val text = when (status.name) {
+        "ACCEPTED" -> "Принят"
+        "INVITED" -> "Ожидает"
+        "DECLINED" -> "Отклонён"
+        else -> status.name
+    }
+
+    val color = when (status.name) {
+        "ACCEPTED" -> Color(0xFF15803D)
+        "INVITED" -> Color(0xFF2563EB)
+        "DECLINED" -> Color(0xFFDC2626)
+        else -> Color(0xFF6B7280)
+    }
+
+    Text(
+        text = text,
+        color = color,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.SemiBold
+    )
+}
+
+/**
+ * Человекочитаемое название роли.
+ */
+private fun roleText(role: ParticipantRole): String {
+    return when (role.name) {
+        "ORGANIZER" -> "Организатор"
+        "EDITOR" -> "Редактор"
+        "VIEWER" -> "Просмотр"
+        else -> role.name
+    }
+}
+
+/**
+ * Описание прав по роли.
+ */
+private fun roleDescription(role: ParticipantRole): String {
+    return when (role.name) {
+        "ORGANIZER" -> "Вы можете редактировать поездку, маршрут, бюджет и приглашать участников."
+        "EDITOR" -> "Вы можете редактировать маршрут и бюджет, но не можете приглашать участников."
+        "VIEWER" -> "Вы можете просматривать поездку без редактирования."
+        else -> "Роль пользователя в поездке."
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun ParticipantsTabPreview() {
@@ -148,68 +388,26 @@ private fun ParticipantsTabPreview() {
             uiState = ParticipantsUiState(
                 participants = listOf(
                     TripParticipant(
-                        id = "user-1",
+                        id = "1",
                         tripId = "trip-1",
-                        email = "organizer@example.com",
+                        email = "organizer@mail.ru",
                         role = ParticipantRole.ORGANIZER,
                         status = ParticipantStatus.ACCEPTED
                     ),
                     TripParticipant(
-                        id = "user-2",
+                        id = "2",
                         tripId = "trip-1",
-                        email = "editor@example.com",
+                        email = "friend@mail.ru",
                         role = ParticipantRole.EDITOR,
-                        status = ParticipantStatus.ACCEPTED
-                    ),
-                    TripParticipant(
-                        id = "user-3",
-                        tripId = "trip-1",
-                        email = "viewer@example.com",
-                        role = ParticipantRole.VIEWER,
                         status = ParticipantStatus.INVITED
                     )
                 ),
                 currentUserRole = ParticipantRole.ORGANIZER,
-                canEditTrip = true,
-                canInviteParticipants = true
+                canInviteParticipants = true,
+                canEditTrip = true
             ),
             currentUserRole = ParticipantRole.ORGANIZER,
             canInvite = true,
-            onEmailChange = {},
-            onRoleChange = {},
-            onInviteClick = {}
-        )
-    }
-}
-@Preview(showBackground = true)
-@Composable
-private fun ParticipantsTabViewerPreview() {
-    TravelAppTheme {
-        ParticipantsTab(
-            tripId = "trip-1",
-            uiState = ParticipantsUiState(
-                participants = listOf(
-                    TripParticipant(
-                        id = "user-1",
-                        tripId = "trip-1",
-                        email = "organizer@example.com",
-                        role = ParticipantRole.ORGANIZER,
-                        status = ParticipantStatus.ACCEPTED
-                    ),
-                    TripParticipant(
-                        id = "user-3",
-                        tripId = "trip-1",
-                        email = "viewer@example.com",
-                        role = ParticipantRole.VIEWER,
-                        status = ParticipantStatus.ACCEPTED
-                    )
-                ),
-                currentUserRole = ParticipantRole.VIEWER,
-                canEditTrip = false,
-                canInviteParticipants = false
-            ),
-            currentUserRole = ParticipantRole.VIEWER,
-            canInvite = false,
             onEmailChange = {},
             onRoleChange = {},
             onInviteClick = {}

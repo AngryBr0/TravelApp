@@ -57,10 +57,6 @@ class FirebaseExpenseRepository(
                 return AppResult.Error("Не указан id поездки")
             }
 
-            if (expense.title.isBlank()) {
-                return AppResult.Error("Введите название расхода")
-            }
-
             if (expense.amount <= 0.0) {
                 return AppResult.Error("Введите корректную сумму")
             }

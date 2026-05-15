@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +40,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 
+
+
 private val AppBlue = Color(0xFF2563EB)
 private val AppBackground = Color(0xFFFAFAF7)
 private val AppDarkText = Color(0xFF111827)
@@ -54,9 +54,20 @@ private val CardBorder = Color(0xFFE5E7EB)
  * Верхняя кнопка уведомлений убрана, потому что уведомления уже есть
  * в нижнем меню. Слева также нет нерабочего аватара.
  */
+/**
+ * Общий Scaffold для главных разделов приложения:
+ * Поездки, Приглашения, Уведомления, Профиль.
+ *
+ * Нижняя навигация остаётся видимой на всех этих экранах,
+ * а selectedItem подсвечивает текущий раздел.
+ */
 @Composable
-fun TripsHomeScaffold(
-    onCreateTripClick: () -> Unit,
+fun MainTabScaffold(
+    title: String,
+    selectedItem: TripsBottomItem,
+    showCreateButton: Boolean = false,
+    onCreateTripClick: () -> Unit = {},
+    onTripsClick: () -> Unit,
     onInvitationsClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -65,27 +76,29 @@ fun TripsHomeScaffold(
     Scaffold(
         containerColor = AppBackground,
         topBar = {
-            TripsTopBar()
+            TripsTopBar(title = title)
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateTripClick,
-                containerColor = AppBlue,
-                contentColor = Color.White,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 6.dp
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Создать поездку"
-                )
+            if (showCreateButton) {
+                FloatingActionButton(
+                    onClick = onCreateTripClick,
+                    containerColor = AppBlue,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 6.dp
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Создать поездку"
+                    )
+                }
             }
         },
         bottomBar = {
             TripsBottomBar(
-                selectedItem = TripsBottomItem.TRIPS,
-                onTripsClick = {},
+                selectedItem = selectedItem,
+                onTripsClick = onTripsClick,
                 onInvitationsClick = onInvitationsClick,
                 onNotificationsClick = onNotificationsClick,
                 onProfileClick = onProfileClick
@@ -96,12 +109,41 @@ fun TripsHomeScaffold(
 }
 
 /**
+ * Scaffold конкретно для экрана "Мои поездки".
+ */
+@Composable
+fun TripsHomeScaffold(
+    onCreateTripClick: () -> Unit,
+    onInvitationsClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    MainTabScaffold(
+        title = "Мои поездки",
+        selectedItem = TripsBottomItem.TRIPS,
+        showCreateButton = true,
+        onCreateTripClick = onCreateTripClick,
+        onTripsClick = {},
+        onInvitationsClick = onInvitationsClick,
+        onNotificationsClick = onNotificationsClick,
+        onProfileClick = onProfileClick,
+        content = content
+    )
+}
+
+/**
  * Верхняя панель.
  *
  * statusBarsPadding() защищает от наложения системной строки телефона.
  */
+/**
+ * Верхняя панель главных разделов.
+ */
 @Composable
-private fun TripsTopBar() {
+private fun TripsTopBar(
+    title: String
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,7 +154,7 @@ private fun TripsTopBar() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Мои поездки",
+            text = title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = AppDarkText
@@ -240,7 +282,7 @@ private fun TripStatusPill(
  * Нижнее меню.
  */
 @Composable
-private fun TripsBottomBar(
+fun TripsBottomBar(
     selectedItem: TripsBottomItem,
     onTripsClick: () -> Unit,
     onInvitationsClick: () -> Unit,
