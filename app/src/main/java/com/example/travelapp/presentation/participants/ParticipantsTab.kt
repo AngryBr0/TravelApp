@@ -615,16 +615,6 @@ private fun ParticipantRow(
                 status = participant.status
             )
         }
-
-        if (canManageParticipant) {
-            AppMutedText(
-                text = if (canEditRole) {
-                    "Нажмите, чтобы изменить роль или удалить участника"
-                } else {
-                    "Нажмите, чтобы удалить запись"
-                }
-            )
-        }
     }
 }
 

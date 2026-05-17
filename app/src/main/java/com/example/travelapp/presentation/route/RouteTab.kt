@@ -65,7 +65,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.travelapp.ui.components.AppBottomActionButton
-
+import com.example.travelapp.ui.components.AppDangerButton
 
 /**
  * RouteTab — вкладка маршрута.
@@ -151,11 +151,7 @@ fun RouteTab(
                     }
                 )
             } else {
-                if (canEdit) {
-                    AppMutedText(
-                        text = "Зажмите иконку справа и перетащите точку, чтобы изменить порядок."
-                    )
-                }
+
 
                 LazyColumn(
                     state = lazyListState,
@@ -192,11 +188,10 @@ fun RouteTab(
                                 } else {
                                     Modifier
                                 },
-                                onEditClick = {
-                                    editingPoint = point
-                                },
-                                onDeleteClick = {
-                                    onDeletePointClick(point.id)
+                                onClick = {
+                                    if (canEdit) {
+                                        editingPoint = point
+                                    }
                                 }
                             )
                         }
@@ -263,6 +258,10 @@ fun RouteTab(
                     )
 
                     editingPoint = null
+                },
+                onDeleteClick = {
+                    onDeletePointClick(editingPoint!!.id)
+                    editingPoint = null
                 }
             )
         }
@@ -295,9 +294,6 @@ private fun AddRoutePointSheetContent(
     ) {
         AppSectionTitle(text = "Добавить место")
 
-        AppMutedText(
-            text = "Найдите место через Яндекс и добавьте его в маршрут."
-        )
 
         AppTextField(
             value = uiState.searchQuery,
@@ -411,13 +407,17 @@ private fun AddRoutePointSheetContent(
 }
 
 /**
- * Bottom sheet редактирования точки.
+ * Bottom sheet редактирования точки маршрута.
+ *
+ * Здесь же находится удаление точки,
+ * чтобы кнопка удаления не была на поверхности списка.
  */
 @Composable
 private fun EditRoutePointSheetContent(
     point: RoutePoint,
     isLoading: Boolean,
-    onSaveClick: (String, String) -> Unit
+    onSaveClick: (String, String) -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     var title by remember(point.id) {
         mutableStateOf(point.title)
@@ -443,7 +443,11 @@ private fun EditRoutePointSheetContent(
             ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        AppSectionTitle(text = "Редактировать точку")
+        AppSectionTitle(text = "Настройки точки")
+
+        AppMutedText(
+            text = "Измените название или заметку к месту."
+        )
 
         AppTextField(
             value = title,
@@ -497,6 +501,12 @@ private fun EditRoutePointSheetContent(
                 fontWeight = FontWeight.Bold
             )
         }
+
+        AppDangerButton(
+            text = "Удалить точку",
+            onClick = onDeleteClick,
+            enabled = !isLoading
+        )
 
         if (isLoading) {
             CircularProgressIndicator()
@@ -599,8 +609,8 @@ private fun SelectedPlaceCard(
 /**
  * Карточка точки маршрута.
  *
- * Справа сверху есть drag handle.
- * Перетаскивать нужно именно за него.
+ * Нажатие на карточку открывает настройки точки.
+ * Удаление вынесено внутрь настроек.
  */
 @Composable
 private fun RoutePointRow(
@@ -609,11 +619,15 @@ private fun RoutePointRow(
     canEdit: Boolean,
     elevation: Dp,
     dragHandleModifier: Modifier,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = canEdit,
+                onClick = onClick
+            ),
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(
             width = 1.dp,
@@ -683,41 +697,13 @@ private fun RoutePointRow(
                 if (canEdit) {
                     IconButton(
                         onClick = {},
-                        modifier = dragHandleModifier.size(38.dp)
+                        modifier = dragHandleModifier
+                            .size(38.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DragIndicator,
                             contentDescription = "Перетащить",
                             tint = Color(0xFF9CA3AF)
-                        )
-                    }
-                }
-            }
-
-            if (canEdit) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onEditClick,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = "Редактировать точку"
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Удалить точку",
-                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
