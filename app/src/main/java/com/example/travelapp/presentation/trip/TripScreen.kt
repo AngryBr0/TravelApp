@@ -60,6 +60,8 @@ fun TripScreen(
     onBackClick: () -> Unit,
 
     tripTitle: String,
+    tripStartDate: String,
+    tripEndDate: String,
     isDeletingTrip: Boolean,
     tripErrorMessage: String?,
     canDeleteTrip: Boolean,
@@ -74,6 +76,7 @@ fun TripScreen(
     onRoutePointAddedHandled: () -> Unit,
     onEditRoutePointClick: (String, String, String) -> Unit,
     onReorderRoutePoints: (List<RoutePoint>) -> Unit,
+    onRouteSelectedDayChange: (Int) -> Unit,
     onDeleteRoutePointClick: (String) -> Unit,
 
     budgetUiState: BudgetUiState,
@@ -170,6 +173,12 @@ fun TripScreen(
                 0 -> RouteTab(
                     tripId = tripId,
                     uiState = routeUiState,
+                    daysCount = calculateTripDaysCount(
+                        startDate = tripStartDate,
+                        endDate = tripEndDate
+                    ),
+                    tripStartDate = tripStartDate,
+                    onSelectedDayChange = onRouteSelectedDayChange,
                     canEdit = participantsUiState.canEditTrip,
                     onSearchQueryChange = onRouteSearchQueryChange,
                     onSearchClick = onRouteSearchClick,
@@ -185,6 +194,12 @@ fun TripScreen(
                 1 -> MapTab(
                     tripId = tripId,
                     routePoints = routeUiState.routePoints
+                        .filter { point ->
+                            point.dayNumber == routeUiState.selectedDayNumber
+                        }
+                        .sortedBy { point ->
+                            point.order
+                        },
                 )
 
                 2 -> BudgetTab(
@@ -337,6 +352,35 @@ private fun TripTabChip(
     }
 }
 
+private fun calculateTripDaysCount(
+    startDate: String,
+    endDate: String
+): Int {
+    if (startDate.isBlank() || endDate.isBlank()) {
+        return 1
+    }
+
+    return try {
+        val formatter = java.text.SimpleDateFormat(
+            "dd.MM.yyyy",
+            java.util.Locale.getDefault()
+        )
+
+        val start = formatter.parse(startDate)
+        val end = formatter.parse(endDate)
+
+        if (start == null || end == null) {
+            1
+        } else {
+            val diffMillis = end.time - start.time
+            val days = (diffMillis / (1000 * 60 * 60 * 24)).toInt() + 1
+            days.coerceAtLeast(1)
+        }
+    } catch (exception: Exception) {
+        1
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun TripScreenPreview() {
@@ -345,6 +389,9 @@ private fun TripScreenPreview() {
             tripId = "trip-1",
             onBackClick = {},
             tripTitle = "Питер",
+            tripStartDate = "12.05.2026",
+            tripEndDate = "15.05.2026",
+            onRouteSelectedDayChange = {},
             isDeletingTrip = false,
             tripErrorMessage = null,
             canDeleteTrip = true,

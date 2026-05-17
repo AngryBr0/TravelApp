@@ -8,5 +8,6 @@ data class RoutePoint(
     val description: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
-    val order: Int = 0
+    val order: Int = 1,
+    val dayNumber: Int = 1
 )

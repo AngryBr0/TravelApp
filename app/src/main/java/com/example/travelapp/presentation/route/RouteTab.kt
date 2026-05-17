@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -22,9 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocationAlt
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,6 +63,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.travelapp.ui.components.AppBottomActionButton
 import com.example.travelapp.ui.components.AppDangerButton
+import androidx.compose.foundation.lazy.LazyRow
 
 /**
  * RouteTab — вкладка маршрута.
@@ -79,6 +77,9 @@ import com.example.travelapp.ui.components.AppDangerButton
 fun RouteTab(
     tripId: String,
     uiState: RouteUiState,
+    daysCount: Int,
+    tripStartDate: String,
+    onSelectedDayChange: (Int) -> Unit,
     canEdit: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onSearchClick: () -> Unit,
@@ -115,12 +116,19 @@ fun RouteTab(
         )
     }
 
-    LaunchedEffect(uiState.routePoints) {
+    LaunchedEffect(
+        uiState.routePoints,
+        uiState.selectedDayNumber
+    ) {
         localPoints.clear()
         localPoints.addAll(
-            uiState.routePoints.sortedBy { point ->
-                point.order
-            }
+            uiState.routePoints
+                .filter { point ->
+                    point.dayNumber == uiState.selectedDayNumber
+                }
+                .sortedBy { point ->
+                    point.order
+                }
         )
     }
 
@@ -140,7 +148,16 @@ fun RouteTab(
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AppSectionTitle(text = "Точки маршрута")
+            if (daysCount > 1) {
+                RouteDaySelector(
+                    daysCount = daysCount,
+                    selectedDayNumber = uiState.selectedDayNumber,
+                    tripStartDate = tripStartDate,
+                    onDayClick = onSelectedDayChange
+                )
+            }
+
+            AppSectionTitle(text = "Маршрут")
 
             if (localPoints.isEmpty()) {
                 AppEmptyState(
@@ -264,6 +281,60 @@ fun RouteTab(
                     editingPoint = null
                 }
             )
+        }
+    }
+}
+
+/**
+ * Компактный переключатель дат маршрута.
+ *
+ * Пользователь видит дату, например "12 мая",
+ * а selectedDayNumber используется только внутри логики.
+ */
+@Composable
+private fun RouteDaySelector(
+    daysCount: Int,
+    selectedDayNumber: Int,
+    tripStartDate: String,
+    onDayClick: (Int) -> Unit
+) {
+    val safeDaysCount = daysCount.coerceAtLeast(1)
+
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(safeDaysCount) { index ->
+            val dayNumber = index + 1
+            val isSelected = dayNumber == selectedDayNumber
+
+            Button(
+                onClick = {
+                    onDayClick(dayNumber)
+                },
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected) {
+                        Color(0xFF2563EB)
+                    } else {
+                        Color(0xFFE5E7EB)
+                    },
+                    contentColor = if (isSelected) {
+                        Color.White
+                    } else {
+                        Color(0xFF111827)
+                    }
+                )
+            ) {
+                Text(
+                    text = routeDateText(
+                        startDate = tripStartDate,
+                        dayNumber = dayNumber
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -712,6 +783,60 @@ private fun RoutePointRow(
     }
 }
 
+/**
+ * Возвращает дату маршрута для интерфейса.
+ *
+ * Например:
+ * 12 мая
+ * 13 мая
+ * 14 мая
+ *
+ * Год не показываем, чтобы переключатель выглядел легче.
+ */
+private fun routeDateText(
+    startDate: String,
+    dayNumber: Int
+): String {
+    if (startDate.isBlank()) {
+        return "Дата не указана"
+    }
+
+    val patterns = listOf(
+        "dd.MM.yyyy",
+        "yyyy-MM-dd"
+    )
+
+    patterns.forEach { pattern ->
+        try {
+            val formatter = java.text.SimpleDateFormat(
+                pattern,
+                java.util.Locale.getDefault()
+            )
+
+            val date = formatter.parse(startDate)
+
+            if (date != null) {
+                val calendar = java.util.Calendar.getInstance()
+                calendar.time = date
+                calendar.add(
+                    java.util.Calendar.DAY_OF_MONTH,
+                    dayNumber - 1
+                )
+
+                val outputFormatter = java.text.SimpleDateFormat(
+                    "d MMMM",
+                    java.util.Locale("ru")
+                )
+
+                return outputFormatter.format(calendar.time)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    return "Дата не указана"
+}
+
 @Preview(
     showBackground = true,
     name = "RouteTab - список точек"
@@ -763,6 +888,9 @@ private fun RouteTabPreview() {
             onAddSelectedPlaceClick = {},
             onRoutePointAddedHandled = {},
             onEditPointClick = { _, _, _ -> },
+            daysCount = 3,
+            tripStartDate = "12.05.2026",
+            onSelectedDayChange = {},
             onReorderPoints = {},
             onDeletePointClick = {}
         )
@@ -788,6 +916,9 @@ private fun RouteTabEmptyPreview() {
             onRoutePointAddedHandled = {},
             onEditPointClick = { _, _, _ -> },
             onReorderPoints = {},
+            daysCount = 3,
+            tripStartDate = "12.05.2026",
+            onSelectedDayChange = {},
             onDeletePointClick = {}
         )
     }

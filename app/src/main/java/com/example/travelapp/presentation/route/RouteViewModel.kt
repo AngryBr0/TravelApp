@@ -76,7 +76,13 @@ class RouteViewModel(
                     is AppResult.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            routePoints = result.data.sortedBy { it.order },
+                            routePoints = result.data.sortedWith(
+                                compareBy<RoutePoint> { point ->
+                                    point.dayNumber
+                                }.thenBy { point ->
+                                    point.order
+                                }
+                            ),
                             errorMessage = null
                         )
                     }
@@ -154,7 +160,7 @@ class RouteViewModel(
     }
 
     /**
-     * Добавляет выбранное место в маршрут.
+     * Добавляет выбранное место в маршрут выбранного дня.
      */
     fun addSelectedPlaceToRoute(tripId: String) {
         val state = _uiState.value
@@ -168,6 +174,14 @@ class RouteViewModel(
             return
         }
 
+        val selectedDayNumber = state.selectedDayNumber
+
+        val nextOrder = state.routePoints
+            .filter { point ->
+                point.dayNumber == selectedDayNumber
+            }
+            .size + 1
+
         val point = RoutePoint(
             tripId = tripId,
             title = selectedPlace.title,
@@ -175,7 +189,8 @@ class RouteViewModel(
             description = state.description,
             latitude = selectedPlace.latitude,
             longitude = selectedPlace.longitude,
-            order = state.routePoints.size + 1
+            order = nextOrder,
+            dayNumber = selectedDayNumber
         )
 
         viewModelScope.launch {
@@ -221,78 +236,6 @@ class RouteViewModel(
                 AppResult.Loading -> Unit
             }
         }
-    }
-
-    /**
-     * Перемещает точку маршрута вверх.
-     *
-     * Логика:
-     * 1. Берем текущий список точек.
-     * 2. Сортируем по order.
-     * 3. Находим выбранную точку.
-     * 4. Меняем её местами с предыдущей.
-     * 5. Пересчитываем order.
-     * 6. Сохраняем новый порядок в репозиторий.
-     */
-    fun movePointUp(
-        tripId: String,
-        pointId: String
-    ) {
-        val currentPoints = _uiState.value.routePoints
-            .sortedBy { point ->
-                point.order
-            }
-            .toMutableList()
-
-        val currentIndex = currentPoints.indexOfFirst { point ->
-            point.id == pointId
-        }
-
-        if (currentIndex <= 0) {
-            return
-        }
-
-        val temp = currentPoints[currentIndex - 1]
-        currentPoints[currentIndex - 1] = currentPoints[currentIndex]
-        currentPoints[currentIndex] = temp
-
-        val reorderedPoints = currentPoints.mapIndexed { index, point ->
-            point.copy(order = index + 1)
-        }
-
-        saveRouteOrder(tripId, reorderedPoints)
-    }
-
-    /**
-     * Перемещает точку маршрута вниз.
-     */
-    fun movePointDown(
-        tripId: String,
-        pointId: String
-    ) {
-        val currentPoints = _uiState.value.routePoints
-            .sortedBy { point ->
-                point.order
-            }
-            .toMutableList()
-
-        val currentIndex = currentPoints.indexOfFirst { point ->
-            point.id == pointId
-        }
-
-        if (currentIndex == -1 || currentIndex >= currentPoints.lastIndex) {
-            return
-        }
-
-        val temp = currentPoints[currentIndex + 1]
-        currentPoints[currentIndex + 1] = currentPoints[currentIndex]
-        currentPoints[currentIndex] = temp
-
-        val reorderedPoints = currentPoints.mapIndexed { index, point ->
-            point.copy(order = index + 1)
-        }
-
-        saveRouteOrder(tripId, reorderedPoints)
     }
 
     /**
@@ -412,49 +355,91 @@ class RouteViewModel(
     /**
      * Сохраняет новый порядок точек после перетаскивания.
      *
-     * UI передаёт список точек уже в новом порядке.
-     * ViewModel пересчитывает order: 1, 2, 3...
+     * Пересчитывает order только внутри выбранного дня,
+     * а точки других дней не трогает.
      */
     fun reorderRoutePoints(
         tripId: String,
         reorderedPoints: List<RoutePoint>
     ) {
-        val normalizedPoints = reorderedPoints.mapIndexed { index, point ->
-            point.copy(order = index + 1)
+        val selectedDayNumber = _uiState.value.selectedDayNumber
+
+        val normalizedSelectedDayPoints = reorderedPoints
+            .filter { point ->
+                point.dayNumber == selectedDayNumber
+            }
+            .mapIndexed { index, point ->
+                point.copy(
+                    order = index + 1,
+                    dayNumber = selectedDayNumber
+                )
+            }
+
+        val otherDayPoints = _uiState.value.routePoints.filter { point ->
+            point.dayNumber != selectedDayNumber
         }
+
+        val finalPoints = (otherDayPoints + normalizedSelectedDayPoints)
+            .sortedWith(
+                compareBy<RoutePoint> { point ->
+                    point.dayNumber
+                }.thenBy { point ->
+                    point.order
+                }
+            )
 
         saveRouteOrder(
             tripId = tripId,
-            points = normalizedPoints
+            points = finalPoints
         )
     }
 
     /**
-     * Удаляет точку маршрута и пересчитывает порядок оставшихся точек.
-     *
-     * Это нужно, чтобы после удаления второй точки не было:
-     * 1, 3, 4
-     *
-     * А было:
-     * 1, 2, 3
+     * Удаляет точку маршрута и пересчитывает порядок только внутри её дня.
      */
     fun deleteRoutePoint(
         tripId: String,
         pointId: String
     ) {
         viewModelScope.launch {
-            val currentPoints = _uiState.value.routePoints
+            val state = _uiState.value
+
+            val pointToDelete = state.routePoints.firstOrNull { point ->
+                point.id == pointId
+            }
+
+            if (pointToDelete == null) {
+                _uiState.value = state.copy(
+                    errorMessage = "Точка маршрута не найдена"
+                )
+                return@launch
+            }
+
+            val targetDayNumber = pointToDelete.dayNumber
+
+            val remainingTargetDayPoints = state.routePoints
+                .filter { point ->
+                    point.id != pointId && point.dayNumber == targetDayNumber
+                }
                 .sortedBy { point ->
                     point.order
-                }
-
-            val remainingPoints = currentPoints
-                .filter { point ->
-                    point.id != pointId
                 }
                 .mapIndexed { index, point ->
                     point.copy(order = index + 1)
                 }
+
+            val otherDayPoints = state.routePoints.filter { point ->
+                point.dayNumber != targetDayNumber
+            }
+
+            val finalPoints = (otherDayPoints + remainingTargetDayPoints)
+                .sortedWith(
+                    compareBy<RoutePoint> { point ->
+                        point.dayNumber
+                    }.thenBy { point ->
+                        point.order
+                    }
+                )
 
             when (
                 val deleteResult = routeRepository.deleteRoutePoint(
@@ -465,11 +450,11 @@ class RouteViewModel(
                 is AppResult.Success -> {
                     routeRepository.updateRoutePointsOrder(
                         tripId = tripId,
-                        points = remainingPoints
+                        points = finalPoints
                     )
 
                     _uiState.value = _uiState.value.copy(
-                        routePoints = remainingPoints,
+                        routePoints = finalPoints,
                         errorMessage = null
                     )
                 }
@@ -498,6 +483,12 @@ class RouteViewModel(
     fun consumeRoutePointAddedEvent() {
         _uiState.value = _uiState.value.copy(
             isRoutePointAdded = false
+        )
+    }
+    fun updateSelectedDay(dayNumber: Int) {
+        _uiState.value = _uiState.value.copy(
+            selectedDayNumber = dayNumber,
+            errorMessage = null
         )
     }
 }

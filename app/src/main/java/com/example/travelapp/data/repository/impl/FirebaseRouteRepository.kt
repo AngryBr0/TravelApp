@@ -28,6 +28,7 @@ import kotlinx.coroutines.tasks.await
  *         latitude
  *         longitude
  *         order
+ *          dayNumber
  *
  * ViewModel не знает, что данные хранятся в Firestore.
  * Она работает только через интерфейс RouteRepository.
@@ -62,17 +63,6 @@ class FirebaseRouteRepository(
             if (point.title.isBlank()) {
                 return AppResult.Error("Введите название точки маршрута")
             }
-
-            /**
-             * Сначала получаем текущие точки, чтобы определить order.
-             * order нужен для отображения порядка посещения точек.
-             */
-            val currentPointsSnapshot = routePointsCollection(tripId)
-                .get()
-                .await()
-
-            val nextOrder = currentPointsSnapshot.size() + 1
-
             /**
              * document() без параметров создаёт новый документ
              * с автоматически сгенерированным id.
@@ -81,8 +71,7 @@ class FirebaseRouteRepository(
 
             val pointWithId = point.copy(
                 id = document.id,
-                tripId = tripId,
-                order = nextOrder
+                tripId = tripId
             )
 
             /**
@@ -99,7 +88,8 @@ class FirebaseRouteRepository(
                 "description" to pointWithId.description,
                 "latitude" to pointWithId.latitude,
                 "longitude" to pointWithId.longitude,
-                "order" to pointWithId.order
+                "order" to pointWithId.order,
+                "dayNumber" to pointWithId.dayNumber
             )
 
             document.set(pointMap).await()
@@ -146,9 +136,13 @@ class FirebaseRouteRepository(
                     .mapNotNull { document ->
                         document.toRoutePointOrNull()
                     }
-                    .sortedBy { point ->
-                        point.order
-                    }
+                    .sortedWith(
+                        compareBy<RoutePoint> { point ->
+                            point.dayNumber
+                        }.thenBy { point ->
+                            point.order
+                        }
+                    )
 
                 trySend(AppResult.Success(points))
             }
@@ -181,8 +175,10 @@ class FirebaseRouteRepository(
 
                 batch.update(
                     document,
-                    "order",
-                    point.order
+                    mapOf(
+                        "order" to point.order,
+                        "dayNumber" to point.dayNumber
+                    )
                 )
             }
 
@@ -272,7 +268,8 @@ class FirebaseRouteRepository(
             description = getString("description").orEmpty(),
             latitude = getDouble("latitude") ?: 0.0,
             longitude = getDouble("longitude") ?: 0.0,
-            order = getLong("order")?.toInt() ?: 0
+            order = getLong("order")?.toInt() ?: 1,
+            dayNumber = getLong("dayNumber")?.toInt() ?: 1
         )
     }
 }

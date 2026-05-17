@@ -433,6 +433,8 @@ fun AppNavigation() {
                 },
 
                 tripTitle = tripUiState.trip?.title.orEmpty(),
+                tripStartDate = tripUiState.trip?.startDate.orEmpty(),
+                tripEndDate = tripUiState.trip?.endDate.orEmpty(),
                 isDeletingTrip = tripUiState.isDeleting,
                 tripErrorMessage = tripUiState.errorMessage,
                 canDeleteTrip = participantsUiState.canInviteParticipants,
@@ -441,6 +443,9 @@ fun AppNavigation() {
                 },
 
                 routeUiState = routeUiState,
+                onRouteSelectedDayChange = { dayNumber ->
+                    routeViewModel.updateSelectedDay(dayNumber)
+                },
                 onRouteSearchQueryChange = routeViewModel::updateSearchQuery,
                 onRouteSearchClick = routeViewModel::searchPlaces,
                 onRoutePlaceClick = routeViewModel::selectPlace,

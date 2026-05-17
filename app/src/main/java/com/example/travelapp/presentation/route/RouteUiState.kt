@@ -16,6 +16,8 @@ data class RouteUiState(
 
     val routePoints: List<RoutePoint> = emptyList(),
 
+    val selectedDayNumber: Int = 1,
+
     /**
      * Текст, который пользователь вводит в поиске.
      */
