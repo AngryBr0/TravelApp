@@ -94,7 +94,9 @@ fun TripScreen(
     participantsUiState: ParticipantsUiState,
     onParticipantEmailChange: (String) -> Unit,
     onParticipantRoleChange: (String) -> Unit,
-    onInviteParticipantClick: () -> Unit
+    onInviteParticipantClick: () -> Unit,
+    onUpdateParticipantRoleClick: (String, ParticipantRole) -> Unit,
+    onDeleteParticipantClick: (String, String) -> Unit,
 ) {
     val selectedTabIndex = remember { mutableIntStateOf(0) }
     val showDeleteDialog = remember { mutableStateOf(false) }
@@ -212,7 +214,9 @@ fun TripScreen(
                     canInvite = participantsUiState.canInviteParticipants,
                     onEmailChange = onParticipantEmailChange,
                     onRoleChange = onParticipantRoleChange,
-                    onInviteClick = onInviteParticipantClick
+                    onInviteClick = onInviteParticipantClick,
+                    onUpdateRoleClick = onUpdateParticipantRoleClick,
+                    onDeleteParticipantClick = onDeleteParticipantClick
                 )
             }
         }
@@ -376,7 +380,9 @@ private fun TripScreenPreview() {
             onParticipantRoleChange = {},
             onInviteParticipantClick = {},
             onEditRoutePointClick = { _, _, _ -> },
-            onRoutePointAddedHandled = {}
+            onRoutePointAddedHandled = {},
+            onUpdateParticipantRoleClick = { _, _ -> },
+            onDeleteParticipantClick = { _, _ -> }
         )
     }
 }

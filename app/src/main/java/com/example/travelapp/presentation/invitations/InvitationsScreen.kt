@@ -108,22 +108,14 @@ private fun InvitationCard(
         )
 
         AppMutedText(
-            text = "Вас пригласили присоединиться к поездке."
+            text = "Пригласил: ${
+                invitation.inviterName.ifBlank { "Пользователь" }
+            }"
         )
 
-        Text(
-            text = "Email: ${invitation.inviteeEmail}",
-            style = MaterialTheme.typography.bodyMedium
+        AppMutedText(
+            text = "Ваша роль: ${invitationRoleText(invitation.role)}"
         )
-
-        Text(
-            text = "Роль: ${invitation.role}",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        if (invitation.createdAt.isNotBlank()) {
-            AppMutedText(text = invitation.createdAt)
-        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -142,6 +134,16 @@ private fun InvitationCard(
         }
     }
 }
+private fun invitationRoleText(
+    role: ParticipantRole
+): String {
+    return when (role) {
+        ParticipantRole.ORGANIZER -> "Организатор"
+        ParticipantRole.EDITOR -> "Редактор"
+        ParticipantRole.VIEWER -> "Просмотр"
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable

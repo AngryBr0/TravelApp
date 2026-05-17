@@ -149,12 +149,6 @@ fun BudgetTab(
         skipPartiallyExpanded = true
     )
 
-    val acceptedParticipants = remember(participants) {
-        participants.filter { participant ->
-            participant.status == ParticipantStatus.ACCEPTED
-        }
-    }
-
     val sortedExpenses = remember(
         uiState.expenses,
         uiState.sortType
@@ -163,6 +157,12 @@ fun BudgetTab(
             expenses = uiState.expenses,
             sortType = uiState.sortType
         )
+    }
+
+    val acceptedParticipants = remember(participants) {
+        participants.filter { participant ->
+            participant.status == ParticipantStatus.ACCEPTED
+        }
     }
 
     LaunchedEffect(uiState.isExpenseAdded) {

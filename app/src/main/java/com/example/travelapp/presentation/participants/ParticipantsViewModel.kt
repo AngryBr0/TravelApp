@@ -222,6 +222,155 @@ class ParticipantsViewModel(
             }
         }
     }
+    /**
+     * Меняет роль участника.
+     *
+     * Доступно только организатору.
+     */
+    fun updateParticipantRole(
+        tripId: String,
+        participantId: String,
+        role: ParticipantRole
+    ) {
+        val state = _uiState.value
+
+        if (state.currentUserRole != ParticipantRole.ORGANIZER) {
+            _uiState.value = state.copy(
+                errorMessage = "Только организатор может менять роли"
+            )
+            return
+        }
+
+        val participant = state.participants.firstOrNull { item ->
+            item.id == participantId
+        }
+
+        if (participant == null) {
+            _uiState.value = state.copy(
+                errorMessage = "Участник не найден"
+            )
+            return
+        }
+
+        if (participant.role == ParticipantRole.ORGANIZER) {
+            _uiState.value = state.copy(
+                errorMessage = "Нельзя изменить роль организатора"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = state.copy(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            when (
+                val result = participantRepository.updateParticipantRole(
+                    tripId = tripId,
+                    participantId = participantId,
+                    role = role
+                )
+            ) {
+                is AppResult.Success -> {
+                    val updatedParticipants = _uiState.value.participants.map { item ->
+                        if (item.id == participantId) {
+                            item.copy(role = role)
+                        } else {
+                            item
+                        }
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        participants = updatedParticipants,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
+    }
+
+    /**
+     * Удаляет участника из поездки.
+     *
+     * Доступно только организатору.
+     */
+    fun deleteParticipant(
+        tripId: String,
+        participantId: String,
+        participantEmail: String
+    ) {
+        val state = _uiState.value
+
+        if (state.currentUserRole != ParticipantRole.ORGANIZER) {
+            _uiState.value = state.copy(
+                errorMessage = "Только организатор может удалять участников"
+            )
+            return
+        }
+
+        val participant = state.participants.firstOrNull { item ->
+            item.id == participantId
+        }
+
+        if (participant == null) {
+            _uiState.value = state.copy(
+                errorMessage = "Участник не найден"
+            )
+            return
+        }
+
+        if (participant.role == ParticipantRole.ORGANIZER) {
+            _uiState.value = state.copy(
+                errorMessage = "Нельзя удалить организатора"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = state.copy(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            when (
+                val result = participantRepository.deleteParticipant(
+                    tripId = tripId,
+                    participantId = participantId,
+                    participantEmail = participantEmail
+                )
+            ) {
+                is AppResult.Success<*> -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        participants = _uiState.value.participants.filter { item ->
+                            item.id != participantId
+                        },
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
+    }
 
     /**
      * Преобразует текстовую роль в enum.
@@ -244,4 +393,6 @@ class ParticipantsViewModel(
             Locale.getDefault()
         ).format(Date())
     }
+
+
 }

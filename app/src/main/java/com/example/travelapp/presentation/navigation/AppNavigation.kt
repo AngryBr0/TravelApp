@@ -505,16 +505,30 @@ fun AppNavigation() {
                         expenseId = expenseId
                     )
                 },
-
                 participantsUiState = participantsUiState,
                 onParticipantEmailChange = participantsViewModel::updateEmail,
                 onParticipantRoleChange = participantsViewModel::updateRole,
-            ) {
-                participantsViewModel.inviteParticipant(
-                    tripId = tripId,
-                    tripTitle = tripUiState.trip?.title.orEmpty()
-                )
-            }
+                onInviteParticipantClick = {
+                    participantsViewModel.inviteParticipant(
+                        tripId = tripId,
+                        tripTitle = tripUiState.trip?.title.orEmpty()
+                    )
+                },
+                onUpdateParticipantRoleClick = { participantId, role ->
+                    participantsViewModel.updateParticipantRole(
+                        tripId = tripId,
+                        participantId = participantId,
+                        role = role
+                    )
+                },
+                onDeleteParticipantClick = { participantId, participantEmail ->
+                    participantsViewModel.deleteParticipant(
+                        tripId = tripId,
+                        participantId = participantId,
+                        participantEmail = participantEmail
+                    )
+                }
+            )
         }
     }
 }

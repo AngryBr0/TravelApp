@@ -12,6 +12,7 @@ data class TripInvitation(
     val tripId: String = "",
     val tripTitle: String = "",
     val inviterUserId: String = "",
+    val inviterName: String = "",
     val inviteeEmail: String = "",
     val role: ParticipantRole = ParticipantRole.VIEWER,
     val status: InvitationStatus = InvitationStatus.PENDING,

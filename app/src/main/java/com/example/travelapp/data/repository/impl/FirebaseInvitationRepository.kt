@@ -47,11 +47,32 @@ class FirebaseInvitationRepository(
                 inviteeEmail = invitation.inviteeEmail.trim().lowercase()
             )
 
+            val inviterDocument = firestore
+                .collection("users")
+                .document(invitationWithId.inviterUserId)
+                .get()
+                .await()
+
+            val inviterEmail = inviterDocument
+                .getString("email")
+                .orEmpty()
+
+            val inviterName = inviterDocument
+                .getString("name")
+                .orEmpty()
+                .ifBlank {
+                    inviterEmail.substringBefore("@")
+                }
+                .ifBlank {
+                    "Пользователь"
+                }
+
             val invitationMap = mapOf(
                 "id" to invitationWithId.id,
                 "tripId" to invitationWithId.tripId,
                 "tripTitle" to invitationWithId.tripTitle,
                 "inviterUserId" to invitationWithId.inviterUserId,
+                "inviterName" to inviterName,
                 "inviteeEmail" to invitationWithId.inviteeEmail,
                 "role" to invitationWithId.role.name,
                 "status" to invitationWithId.status.name,
@@ -172,7 +193,6 @@ class FirebaseInvitationRepository(
                 .ifBlank {
                     "Участник"
                 }
-
             val participantMap = mapOf(
                 "id" to userId,
                 "tripId" to invitation.tripId,
@@ -217,10 +237,37 @@ class FirebaseInvitationRepository(
         invitationId: String
     ): AppResult<Unit> {
         return try {
-            invitationsCollection
+            val invitationDocument = invitationsCollection
                 .document(invitationId)
-                .update("status", InvitationStatus.DECLINED.name)
+
+            val invitationSnapshot = invitationDocument
+                .get()
                 .await()
+
+            val invitation = invitationSnapshot.toInvitationOrNull()
+                ?: return AppResult.Error("Приглашение не найдено")
+
+            val participantDocument = firestore
+                .collection("trips")
+                .document(invitation.tripId)
+                .collection("participants")
+                .document(invitation.inviteeEmail)
+
+            val batch = firestore.batch()
+
+            batch.update(
+                invitationDocument,
+                "status",
+                InvitationStatus.DECLINED.name
+            )
+
+            batch.update(
+                participantDocument,
+                "status",
+                ParticipantStatus.DECLINED.name
+            )
+
+            batch.commit().await()
 
             AppResult.Success(Unit)
         } catch (exception: Exception) {
@@ -254,6 +301,7 @@ class FirebaseInvitationRepository(
             tripId = tripId,
             tripTitle = getString("tripTitle").orEmpty(),
             inviterUserId = getString("inviterUserId").orEmpty(),
+            inviterName = getString("inviterName").orEmpty(),
             inviteeEmail = inviteeEmail,
             role = role,
             status = status,

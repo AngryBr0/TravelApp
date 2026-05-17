@@ -9,50 +9,28 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
+import com.google.firebase.firestore.FieldValue
 /**
  * FirebaseParticipantRepository — реальная реализация ParticipantRepository через Firestore.
  *
- * Этот класс отвечает за участников конкретной поездки.
- *
- * Структура хранения:
- *
- * trips/
- *   tripId/
- *     participants/
- *       participantId/
- *         id
- *         tripId
- *         email
- *         role
- *         status
- *
- * ViewModel не знает, что используется Firestore.
- * Она работает только через интерфейс ParticipantRepository.
+ * Репозиторий:
+ * - читает участников поездки;
+ * - добавляет приглашённых участников;
+ * - подтягивает имена пользователей из users/{userId};
+ * - добавляет организатора в список, если в старой поездке он не был записан.
  */
 class FirebaseParticipantRepository(
     private val firestore: FirebaseFirestore
 ) : ParticipantRepository {
 
-    /**
-     * Возвращает ссылку на подколлекцию participants конкретной поездки.
-     */
     private fun participantsCollection(tripId: String) =
         firestore
             .collection("trips")
             .document(tripId)
             .collection("participants")
 
-    /**
-     * Приглашает участника в поездку.
-     *
-     * Сейчас приглашение реализовано упрощенно:
-     * пользователь вводит email, а приложение сохраняет запись участника
-     * со статусом INVITED.
-     *
-     * Это достаточно для прототипа ВКР.
-     */
     override suspend fun inviteParticipant(
         tripId: String,
         participant: TripParticipant
@@ -70,12 +48,10 @@ class FirebaseParticipantRepository(
                 return AppResult.Error("Введите корректный email")
             }
 
-            /**
-             * Проверяем, не был ли такой email уже добавлен в участники.
-             * Это простая защита от дублей.
-             */
+            val normalizedEmail = participant.email.trim().lowercase()
+
             val existingParticipantSnapshot = participantsCollection(tripId)
-                .whereEqualTo("email", participant.email)
+                .whereEqualTo("email", normalizedEmail)
                 .get()
                 .await()
 
@@ -83,21 +59,16 @@ class FirebaseParticipantRepository(
                 return AppResult.Error("Этот участник уже добавлен")
             }
 
-            val normalizedEmail = participant.email.trim().lowercase()
-
             val document = participantsCollection(tripId)
                 .document(normalizedEmail)
 
             val participantWithId = participant.copy(
                 id = normalizedEmail,
                 tripId = tripId,
-                email = normalizedEmail
+                email = normalizedEmail,
+                name = participant.name
             )
 
-            /**
-             * enum role и status сохраняем как строки.
-             * Так их проще восстановить при чтении из Firestore.
-             */
             val participantMap = mapOf(
                 "id" to participantWithId.id,
                 "tripId" to participantWithId.tripId,
@@ -117,12 +88,6 @@ class FirebaseParticipantRepository(
         }
     }
 
-    /**
-     * Подписывается на список участников поездки.
-     *
-     * addSnapshotListener позволяет автоматически обновлять экран,
-     * когда в Firestore появляется новый участник.
-     */
     override fun observeParticipants(
         tripId: String
     ): Flow<AppResult<List<TripParticipant>>> = callbackFlow {
@@ -144,29 +109,218 @@ class FirebaseParticipantRepository(
                     return@addSnapshotListener
                 }
 
-                val participants = snapshot.documents
-                    .mapNotNull { document ->
-                        document.toTripParticipantOrNull()
-                    }
+                launch {
+                    val rawParticipants = snapshot.documents
+                        .mapNotNull { document ->
+                            document.toTripParticipantOrNull()
+                        }
 
-                trySend(AppResult.Success(participants))
+                    val participantsWithOrganizer = ensureOrganizerExists(
+                        tripId = tripId,
+                        participants = rawParticipants
+                    )
+
+                    val enrichedParticipants = participantsWithOrganizer
+                        .map { participant ->
+                            enrichParticipantWithUserData(participant)
+                        }
+                        .sortedWith(
+                            compareByDescending<TripParticipant> { participant ->
+                                participant.role == ParticipantRole.ORGANIZER
+                            }.thenBy { participant ->
+                                participant.name.ifBlank { participant.email }
+                            }
+                        )
+
+                    trySend(AppResult.Success(enrichedParticipants))
+                }
             }
 
-        /**
-         * Когда экран больше не слушает Flow,
-         * удаляем Firebase listener.
-         */
         awaitClose {
             listener.remove()
         }
     }
 
     /**
-     * Преобразует документ Firestore в объект TripParticipant.
+     * Добавляет организатора в список, если это старая поездка,
+     * где организатор ещё не был записан в participants.
      */
+    private suspend fun ensureOrganizerExists(
+        tripId: String,
+        participants: List<TripParticipant>
+    ): List<TripParticipant> {
+        val tripDocument = firestore
+            .collection("trips")
+            .document(tripId)
+            .get()
+            .await()
+
+        val ownerId = tripDocument
+            .getString("ownerId")
+            .orEmpty()
+
+        if (ownerId.isBlank()) {
+            return participants
+        }
+
+        val organizerAlreadyExists = participants.any { participant ->
+            participant.id == ownerId || participant.role == ParticipantRole.ORGANIZER
+        }
+
+        if (organizerAlreadyExists) {
+            return participants
+        }
+
+        val ownerUserDocument = firestore
+            .collection("users")
+            .document(ownerId)
+            .get()
+            .await()
+
+        val ownerEmail = ownerUserDocument
+            .getString("email")
+            .orEmpty()
+
+        val ownerName = ownerUserDocument
+            .getString("name")
+            .orEmpty()
+            .ifBlank {
+                ownerEmail.substringBefore("@")
+            }
+            .ifBlank {
+                "Организатор"
+            }
+
+        val organizer = TripParticipant(
+            id = ownerId,
+            tripId = tripId,
+            email = ownerEmail,
+            name = ownerName,
+            role = ParticipantRole.ORGANIZER,
+            status = ParticipantStatus.ACCEPTED
+        )
+
+        /**
+         * Сохраняем организатора в Firestore,
+         * чтобы в следующий раз он уже был нормальным участником поездки.
+         */
+        participantsCollection(tripId)
+            .document(ownerId)
+            .set(
+                mapOf(
+                    "id" to organizer.id,
+                    "tripId" to organizer.tripId,
+                    "email" to organizer.email,
+                    "name" to organizer.name,
+                    "role" to organizer.role.name,
+                    "status" to organizer.status.name
+                )
+            )
+            .await()
+
+        return listOf(organizer) + participants
+    }
+
+    /**
+     * Дополняет участника email/name из users/{id}.
+     *
+     * Это чинит старые документы, где у организатора email был пустой,
+     * а name вообще не сохранялся.
+     */
+    private suspend fun enrichParticipantWithUserData(
+        participant: TripParticipant
+    ): TripParticipant {
+        val userDocument = firestore
+            .collection("users")
+            .document(participant.id)
+            .get()
+            .await()
+
+        val userEmail = userDocument
+            .getString("email")
+            .orEmpty()
+
+        val finalEmail = participant.email
+            .ifBlank { userEmail }
+
+        val userName = userDocument
+            .getString("name")
+            .orEmpty()
+
+        val finalName = participant.name
+            .ifBlank { userName }
+            .ifBlank { finalEmail.substringBefore("@") }
+            .ifBlank {
+                if (participant.role == ParticipantRole.ORGANIZER) {
+                    "Организатор"
+                } else {
+                    "Участник"
+                }
+            }
+
+        return participant.copy(
+            email = finalEmail,
+            name = finalName
+        )
+    }
+
+    /**
+     * Обновляет роль участника поездки.
+     *
+     * Важно:
+     * у приглашённых пользователей documentId может быть email,
+     * а после принятия приглашения поле id становится userId.
+     * Поэтому сначала ищем документ по полю "id".
+     */
+    override suspend fun updateParticipantRole(
+        tripId: String,
+        participantId: String,
+        role: ParticipantRole
+    ): AppResult<Unit> {
+        return try {
+            if (tripId.isBlank()) {
+                return AppResult.Error("Не указан id поездки")
+            }
+
+            if (participantId.isBlank()) {
+                return AppResult.Error("Участник не найден")
+            }
+
+            if (role == ParticipantRole.ORGANIZER) {
+                return AppResult.Error("Нельзя назначить организатора")
+            }
+
+            val participantSnapshot = participantsCollection(tripId)
+                .whereEqualTo("id", participantId)
+                .get()
+                .await()
+
+            val participantDocument = participantSnapshot.documents.firstOrNull()
+
+            if (participantDocument != null) {
+                participantDocument.reference
+                    .update("role", role.name)
+                    .await()
+            } else {
+                participantsCollection(tripId)
+                    .document(participantId)
+                    .update("role", role.name)
+                    .await()
+            }
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка изменения роли участника"
+            )
+        }
+    }
+
     private fun com.google.firebase.firestore.DocumentSnapshot.toTripParticipantOrNull(): TripParticipant? {
         val id = getString("id") ?: this.id
-        val email = getString("email") ?: return null
+
+        val email = getString("email").orEmpty()
+        val name = getString("name").orEmpty()
 
         val roleText = getString("role") ?: ParticipantRole.VIEWER.name
         val statusText = getString("status") ?: ParticipantStatus.INVITED.name
@@ -183,9 +337,130 @@ class FirebaseParticipantRepository(
             id = id,
             tripId = getString("tripId").orEmpty(),
             email = email,
-            name = getString("name").orEmpty(),
+            name = name,
             role = role,
             status = status
         )
+    }
+    /**
+     * Удаляет участника из поездки.
+     *
+     * Работает для:
+     * - ACCEPTED участника;
+     * - INVITED участника;
+     * - DECLINED участника.
+     *
+     * Также удаляет связанные приглашения, чтобы запись больше не висела.
+     */
+    override suspend fun deleteParticipant(
+        tripId: String,
+        participantId: String,
+        participantEmail: String
+    ): AppResult<Unit> {
+        return try {
+            if (tripId.isBlank()) {
+                return AppResult.Error("Не указан id поездки")
+            }
+
+            if (participantId.isBlank() && participantEmail.isBlank()) {
+                return AppResult.Error("Участник не найден")
+            }
+
+            val tripDocument = firestore
+                .collection("trips")
+                .document(tripId)
+
+            val normalizedEmail = participantEmail
+                .trim()
+                .lowercase()
+
+            /**
+             * У принятого приглашения documentId может быть email,
+             * а поле id уже содержит uid пользователя.
+             *
+             * Поэтому сначала ищем документ по полю id.
+             */
+            val participantByIdSnapshot = participantsCollection(tripId)
+                .whereEqualTo("id", participantId)
+                .get()
+                .await()
+
+            val participantDocument = participantByIdSnapshot.documents.firstOrNull()
+                ?: if (normalizedEmail.isNotBlank()) {
+                    participantsCollection(tripId)
+                        .document(normalizedEmail)
+                        .get()
+                        .await()
+                } else {
+                    participantsCollection(tripId)
+                        .document(participantId)
+                        .get()
+                        .await()
+                }
+
+            if (!participantDocument.exists()) {
+                return AppResult.Error("Участник не найден")
+            }
+
+            val roleText = participantDocument.getString("role").orEmpty()
+
+            if (roleText == ParticipantRole.ORGANIZER.name) {
+                return AppResult.Error("Нельзя удалить организатора поездки")
+            }
+
+            val batch = firestore.batch()
+
+            /**
+             * Удаляем документ участника из trips/{tripId}/participants.
+             */
+            batch.delete(participantDocument.reference)
+
+            /**
+             * Если участник уже принимал приглашение,
+             * его uid есть в массиве trips/{tripId}.participants.
+             * Удаляем его оттуда, чтобы поездка пропала у пользователя.
+             */
+            if (participantId.isNotBlank()) {
+                batch.update(
+                    tripDocument,
+                    "participants",
+                    FieldValue.arrayRemove(participantId)
+                )
+            }
+
+            /**
+             * Удаляем связанные приглашения.
+             *
+             * Чтобы не ловить проблемы с составными индексами Firestore,
+             * ищем приглашения по tripId, а email фильтруем уже в коде.
+             */
+            val invitationDocuments = firestore
+                .collection("invitations")
+                .whereEqualTo("tripId", tripId)
+                .get()
+                .await()
+                .documents
+                .filter { invitationDocument ->
+                    val inviteeEmail = invitationDocument
+                        .getString("inviteeEmail")
+                        .orEmpty()
+                        .trim()
+                        .lowercase()
+
+                    inviteeEmail == normalizedEmail
+                }
+
+            invitationDocuments.forEach { invitationDocument ->
+                batch.delete(invitationDocument.reference)
+            }
+
+            batch.commit().await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка удаления участника"
+            )
+        }
     }
 }
