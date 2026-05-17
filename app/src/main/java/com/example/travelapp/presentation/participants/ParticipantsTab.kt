@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -48,6 +47,7 @@ import com.example.travelapp.ui.components.AppSectionTitle
 import com.example.travelapp.ui.components.AppTextField
 import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import com.example.travelapp.ui.components.AppBottomActionButton
 
 /**
  * ParticipantsTab — вкладка участников поездки.
@@ -120,34 +120,17 @@ fun ParticipantsTab(
         }
 
         if (canInvite) {
-            Button(
+            AppBottomActionButton(
+                text = "Пригласить",
+                icon = Icons.Filled.GroupAdd,
                 onClick = {
                     isInviteSheetVisible.value = true
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp)
-                    .height(42.dp)
-                    .width(210.dp),
-                shape = RoundedCornerShape(21.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB),
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.GroupAdd,
-                    contentDescription = "Пригласить",
-                    modifier = Modifier.padding(end = 6.dp)
-                )
-
-                Text(
-                    text = "Пригласить",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-            }
+                    .padding(bottom = 14.dp),
+                width = 220.dp
+            )
         }
     }
 

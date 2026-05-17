@@ -44,6 +44,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
+import com.example.travelapp.data.model.RoutePoint
+import com.example.travelapp.data.model.ExpenseOwnerType
+import com.example.travelapp.presentation.budget.ExpenseSortType
 
 /**
  * TripScreen — экран конкретной поездки.
@@ -68,16 +71,24 @@ fun TripScreen(
     onRoutePlaceClick: (PlaceSearchResult) -> Unit,
     onRouteDescriptionChange: (String) -> Unit,
     onAddSelectedPlaceClick: () -> Unit,
-    onMoveRoutePointUpClick: (String) -> Unit,
-    onMoveRoutePointDownClick: (String) -> Unit,
+    onRoutePointAddedHandled: () -> Unit,
+    onEditRoutePointClick: (String, String, String) -> Unit,
+    onReorderRoutePoints: (List<RoutePoint>) -> Unit,
     onDeleteRoutePointClick: (String) -> Unit,
 
     budgetUiState: BudgetUiState,
     onBudgetTitleChange: (String) -> Unit,
     onBudgetCategoryChange: (ExpenseCategory) -> Unit,
     onBudgetAmountChange: (String) -> Unit,
+    onBudgetExpenseDateChange: (String) -> Unit,
+    onBudgetOwnerTypeChange: (ExpenseOwnerType) -> Unit,
+    onBudgetOwnerUserChange: (String, String) -> Unit,
+    onBudgetSortTypeChange: (ExpenseSortType) -> Unit,
+    onBudgetLimitInputChange: (String) -> Unit,
+    onSaveBudgetLimitClick: () -> Unit,
     onAddExpenseClick: () -> Unit,
     onExpenseAddedHandled: () -> Unit,
+    onUpdateExpenseClick: (String, String, ExpenseCategory, String, String, ExpenseOwnerType, String, String) -> Unit,
     onDeleteExpenseClick: (String) -> Unit,
 
     participantsUiState: ParticipantsUiState,
@@ -163,8 +174,9 @@ fun TripScreen(
                     onPlaceClick = onRoutePlaceClick,
                     onDescriptionChange = onRouteDescriptionChange,
                     onAddSelectedPlaceClick = onAddSelectedPlaceClick,
-                    onMovePointUpClick = onMoveRoutePointUpClick,
-                    onMovePointDownClick = onMoveRoutePointDownClick,
+                    onRoutePointAddedHandled = onRoutePointAddedHandled,
+                    onEditPointClick = onEditRoutePointClick,
+                    onReorderPoints = onReorderRoutePoints,
                     onDeletePointClick = onDeleteRoutePointClick
                 )
 
@@ -176,12 +188,20 @@ fun TripScreen(
                 2 -> BudgetTab(
                     tripId = tripId,
                     uiState = budgetUiState,
+                    participants = participantsUiState.participants,
                     canEdit = participantsUiState.canEditTrip,
                     onTitleChange = onBudgetTitleChange,
                     onCategoryChange = onBudgetCategoryChange,
                     onAmountChange = onBudgetAmountChange,
+                    onExpenseDateChange = onBudgetExpenseDateChange,
+                    onOwnerTypeChange = onBudgetOwnerTypeChange,
+                    onOwnerUserChange = onBudgetOwnerUserChange,
+                    onSortTypeChange = onBudgetSortTypeChange,
+                    onBudgetLimitInputChange = onBudgetLimitInputChange,
+                    onSaveBudgetLimitClick = onSaveBudgetLimitClick,
                     onAddExpenseClick = onAddExpenseClick,
                     onExpenseAddedHandled = onExpenseAddedHandled,
+                    onUpdateExpenseClick = onUpdateExpenseClick,
                     onDeleteExpenseClick = onDeleteExpenseClick
                 )
 
@@ -331,13 +351,19 @@ private fun TripScreenPreview() {
             onRoutePlaceClick = {},
             onRouteDescriptionChange = {},
             onAddSelectedPlaceClick = {},
-            onMoveRoutePointUpClick = {},
-            onMoveRoutePointDownClick = {},
+            onReorderRoutePoints = {},
             onDeleteRoutePointClick = {},
             budgetUiState = BudgetUiState(),
             onBudgetTitleChange = {},
             onBudgetCategoryChange = {},
             onBudgetAmountChange = {},
+            onBudgetExpenseDateChange = {},
+            onBudgetOwnerTypeChange = {},
+            onBudgetOwnerUserChange = { _, _ -> },
+            onBudgetSortTypeChange = {},
+            onBudgetLimitInputChange = {},
+            onSaveBudgetLimitClick = {},
+            onUpdateExpenseClick = { _, _, _, _, _, _, _, _ -> },
             onAddExpenseClick = {},
             onExpenseAddedHandled = {},
             onDeleteExpenseClick = {},
@@ -348,7 +374,9 @@ private fun TripScreenPreview() {
             ),
             onParticipantEmailChange = {},
             onParticipantRoleChange = {},
-            onInviteParticipantClick = {}
+            onInviteParticipantClick = {},
+            onEditRoutePointClick = { _, _, _ -> },
+            onRoutePointAddedHandled = {}
         )
     }
 }

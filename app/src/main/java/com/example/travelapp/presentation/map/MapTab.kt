@@ -1,20 +1,24 @@
 package com.example.travelapp.presentation.map
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.widget.Toast
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -27,20 +31,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.Color
-import com.example.travelapp.R
 import com.example.travelapp.data.model.RoutePoint
+import com.example.travelapp.ui.components.AppMutedText
 import com.example.travelapp.ui.theme.TravelAppTheme
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.geometry.Polyline
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
+import kotlin.math.max
+import com.example.travelapp.ui.components.AppBottomActionButton
 
 /**
  * MapTab — вкладка карты маршрута.
  *
- * Экспорт в Яндекс Карты теперь вынесен в компактную верхнюю панель,
- * а не лежит большой карточкой поверх карты.
+ * Теперь карта отображает:
+ * - маркеры с номерами;
+ * - названия точек рядом с маркерами;
+ * - синюю линию маршрута;
+ * - компактную панель маршрута снизу.
  */
 @Composable
 fun MapTab(
@@ -79,13 +89,67 @@ fun MapTab(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        MapCompactHeader(
-            pointsCount = sortedPoints.size,
-            canOpenInMaps = sortedPoints.size >= 2,
-            onOpenInMapsClick = {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = {
+                mapView
+            },
+            update = { view ->
+                val map = view.mapWindow.map
+                val mapObjects = map.mapObjects
+
+                mapObjects.clear()
+
+                /**
+                 * Добавляем маркеры с номерами и подписями.
+                 */
+                sortedPoints.forEachIndexed { index, routePoint ->
+                    val markerBitmap = createNumberedMarkerBitmap(
+                        context = context,
+                        number = index + 1
+                    )
+
+                    val markerIcon = ImageProvider.fromBitmap(markerBitmap)
+
+                    val placemark = mapObjects.addPlacemark()
+                    placemark.geometry = Point(
+                        routePoint.latitude,
+                        routePoint.longitude
+                    )
+                    placemark.setIcon(markerIcon)
+                }
+
+                /**
+                 * Рисуем линию маршрута в порядке order.
+                 */
+                val polylinePoints = sortedPoints.map { routePoint ->
+                    Point(routePoint.latitude, routePoint.longitude)
+                }
+
+                if (polylinePoints.size >= 2) {
+                    val polyline = mapObjects.addPolyline(
+                        Polyline(polylinePoints)
+                    )
+
+                    polyline.setStrokeColor(
+                        AndroidColor.rgb(37, 99, 235)
+                    )
+                    polyline.setStrokeWidth(5.0f)
+                }
+
+                moveCameraToRoute(
+                    map = map,
+                    points = sortedPoints
+                )
+            }
+        )
+
+        RouteMapBottomPanel(
+            points = sortedPoints,
+            onOpenInYandexMapsClick = {
                 val isOpened = exporter.openRouteInYandexMaps(
                     context = context,
                     routePoints = sortedPoints
@@ -98,119 +162,171 @@ fun MapTab(
                         Toast.LENGTH_LONG
                     ).show()
                 }
-            }
-        )
-
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = {
-                mapView
             },
-            update = { view ->
-                val map = view.mapWindow.map
-                val mapObjects = map.mapObjects
-
-                mapObjects.clear()
-
-                val imageProvider = ImageProvider.fromResource(
-                    context,
-                    R.drawable.ic_map_pin
-                )
-
-                sortedPoints.forEach { routePoint ->
-                    val placemark = mapObjects.addPlacemark()
-                    placemark.geometry = Point(routePoint.latitude, routePoint.longitude)
-                    placemark.setIcon(imageProvider)
-                }
-
-                val polylinePoints = sortedPoints.map { routePoint ->
-                    Point(routePoint.latitude, routePoint.longitude)
-                }
-
-                if (polylinePoints.size >= 2) {
-                    mapObjects.addPolyline(
-                        Polyline(polylinePoints)
-                    )
-                }
-
-                val firstPoint = sortedPoints.firstOrNull()
-
-                if (firstPoint != null) {
-                    map.move(
-                        CameraPosition(
-                            Point(firstPoint.latitude, firstPoint.longitude),
-                            12.0f,
-                            0.0f,
-                            0.0f
-                        )
-                    )
-                } else {
-                    map.move(
-                        CameraPosition(
-                            Point(55.751225, 37.62954),
-                            10.0f,
-                            0.0f,
-                            0.0f
-                        )
-                    )
-                }
-            }
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(14.dp)
         )
     }
 }
 
 /**
- * Компактная панель над картой.
+ * Плавающая кнопка экспорта маршрута в Яндекс Карты.
  */
 @Composable
-private fun MapCompactHeader(
-    pointsCount: Int,
-    canOpenInMaps: Boolean,
-    onOpenInMapsClick: () -> Unit
+private fun RouteMapBottomPanel(
+    points: List<RoutePoint>,
+    onOpenInYandexMapsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 18.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = "Карта маршрута",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = when (pointsCount) {
-                    0 -> "Нет точек"
-                    1 -> "1 точка"
-                    else -> "$pointsCount точки"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        OutlinedButton(
-            onClick = onOpenInMapsClick,
-            enabled = canOpenInMaps,
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFF2563EB)
-            )
-        ) {
-            Text(
-                text = "Открыть",
-                maxLines = 1
-            )
-        }
-    }
+    AppBottomActionButton(
+        text = "Экспорт в Яндекс Карты",
+        icon = null,
+        onClick = onOpenInYandexMapsClick,
+        enabled = points.size >= 2,
+        modifier = modifier,
+        width = 260.dp
+    )
 }
+
+/**
+ * Создаёт круглую иконку маркера с номером.
+ *
+ * Вместо одинаковых красных пинов пользователь видит:
+ * 1, 2, 3...
+ * Это сразу показывает порядок маршрута.
+ */
+private fun createNumberedMarkerBitmap(
+    context: Context,
+    number: Int
+): Bitmap {
+    val density = context.resources.displayMetrics.density
+
+    val size = (42 * density).toInt()
+    val radius = size * 0.38f
+
+    val bitmap = Bitmap.createBitmap(
+        size,
+        size,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = Canvas(bitmap)
+
+    val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(37, 99, 235)
+        style = Paint.Style.FILL
+    }
+
+    val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 3f * density
+    }
+
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
+        textSize = 16f * density
+    }
+
+    val centerX = size / 2f
+    val centerY = size / 2f
+
+    canvas.drawCircle(
+        centerX,
+        centerY,
+        radius,
+        circlePaint
+    )
+
+    canvas.drawCircle(
+        centerX,
+        centerY,
+        radius,
+        borderPaint
+    )
+
+    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2
+
+    canvas.drawText(
+        number.toString(),
+        centerX,
+        textY,
+        textPaint
+    )
+
+    return bitmap
+}
+
+/**
+ * Двигает камеру так, чтобы было видно весь маршрут.
+ *
+ * Это не идеальный fitBounds, но для дипломного прототипа
+ * работает намного лучше, чем фокус только на первой точке.
+ */
+private fun moveCameraToRoute(
+    map: Map,
+    points: List<RoutePoint>
+) {
+    if (points.isEmpty()) {
+        map.move(
+            CameraPosition(
+                Point(55.751225, 37.62954),
+                10.0f,
+                0.0f,
+                0.0f
+            )
+        )
+        return
+    }
+
+    val minLat = points.minOf { point ->
+        point.latitude
+    }
+
+    val maxLat = points.maxOf { point ->
+        point.latitude
+    }
+
+    val minLon = points.minOf { point ->
+        point.longitude
+    }
+
+    val maxLon = points.maxOf { point ->
+        point.longitude
+    }
+
+    val centerLat = (minLat + maxLat) / 2.0
+    val centerLon = (minLon + maxLon) / 2.0
+
+    val delta = max(
+        maxLat - minLat,
+        maxLon - minLon
+    )
+
+    val zoom = when {
+        delta < 0.005 -> 16.0f
+        delta < 0.02 -> 14.0f
+        delta < 0.08 -> 12.0f
+        delta < 0.3 -> 10.0f
+        delta < 1.0 -> 8.0f
+        else -> 5.0f
+    }
+
+    map.move(
+        CameraPosition(
+            Point(centerLat, centerLon),
+            zoom,
+            0.0f,
+            0.0f
+        )
+    )
+}
+
+
+
 
 /**
  * Preview без настоящего MapView.
@@ -219,27 +335,34 @@ private fun MapCompactHeader(
 private fun MapTabPreviewContent(
     routePoints: List<RoutePoint>
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE5E7EB))
     ) {
-        MapCompactHeader(
-            pointsCount = routePoints.size,
-            canOpenInMaps = routePoints.size >= 2,
-            onOpenInMapsClick = {}
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFE5E7EB)),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
                 text = "Здесь будет Яндекс.Карта",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
+            AppMutedText(
+                text = "В Preview карта заменена заглушкой"
+            )
         }
+
+        RouteMapBottomPanel(
+            points = routePoints,
+            onOpenInYandexMapsClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(14.dp)
+        )
     }
 }
 
@@ -269,6 +392,16 @@ private fun MapTabPreview() {
                     latitude = 59.9343,
                     longitude = 30.3245,
                     order = 2
+                ),
+                RoutePoint(
+                    id = "3",
+                    tripId = "trip-1",
+                    title = "Исаакиевский собор",
+                    address = "Санкт-Петербург",
+                    description = "",
+                    latitude = 59.9340,
+                    longitude = 30.3061,
+                    order = 3
                 )
             )
         )

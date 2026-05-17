@@ -36,5 +36,11 @@ data class RouteUiState(
      */
     val description: String = "",
 
+    /**
+     * Одноразовый флаг успешного добавления точки маршрута.
+     * UI использует его, чтобы закрыть bottom sheet только после успеха.
+     */
+    val isRoutePointAdded: Boolean = false,
+
     val errorMessage: String? = null
 )

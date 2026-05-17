@@ -1,5 +1,6 @@
 package com.example.travelapp.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -52,6 +55,11 @@ import androidx.compose.runtime.setValue
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+
 
 private val AppBlue = Color(0xFF2563EB)
 private val AppBackground = Color(0xFFFAFAF7)
@@ -509,6 +517,59 @@ fun AppSmallDangerButton(
             text = text,
             color = Color(0xFFDC2626),
             fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+/**
+ * Общая нижняя плавающая кнопка для основных действий на вкладках.
+ *
+ * Используется для:
+ * - Добавить место
+ * - Добавить расход
+ * - Пригласить
+ * - Экспорт в Яндекс Карты
+ *
+ * Так все кнопки будут одинаковой высоты, формы и стиля.
+ */
+@Composable
+fun AppBottomActionButton(
+    text: String,
+    icon: ImageVector? = null,
+    onClick: () -> Unit,
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    width: Dp = 220.dp
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .height(44.dp)
+            .width(width),
+        shape = RoundedCornerShape(22.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF2563EB),
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFFE5E7EB),
+            disabledContentColor = Color(0xFF6B7280)
+        )
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(end = 4.dp)
+            )
+        }
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

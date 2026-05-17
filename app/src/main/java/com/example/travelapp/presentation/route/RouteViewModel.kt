@@ -43,13 +43,17 @@ class RouteViewModel(
 
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(
-            searchQuery = query
+            searchQuery = query,
+            errorMessage = null,
+            isRoutePointAdded = false
         )
     }
 
     fun updateDescription(description: String) {
         _uiState.value = _uiState.value.copy(
-            description = description
+            description = description,
+            errorMessage = null,
+            isRoutePointAdded = false
         )
     }
 
@@ -92,6 +96,13 @@ class RouteViewModel(
      * Ищет места через Яндекс.
      */
     fun searchPlaces() {
+        _uiState.value = _uiState.value.copy(
+            isSearching = true,
+            errorMessage = null,
+            searchResults = emptyList(),
+            selectedPlace = null,
+            isRoutePointAdded = false
+        )
         val query = _uiState.value.searchQuery
 
         if (query.isBlank()) {
@@ -137,7 +148,8 @@ class RouteViewModel(
         _uiState.value = _uiState.value.copy(
             selectedPlace = place,
             searchResults = emptyList(),
-            errorMessage = null
+            errorMessage = null,
+            isRoutePointAdded = false
         )
     }
 
@@ -150,7 +162,8 @@ class RouteViewModel(
 
         if (selectedPlace == null) {
             _uiState.value = state.copy(
-                errorMessage = "Выберите место из результатов поиска"
+                errorMessage = "Выберите место из результатов поиска",
+                isRoutePointAdded = false
             )
             return
         }
@@ -179,7 +192,8 @@ class RouteViewModel(
                         searchResults = emptyList(),
                         selectedPlace = null,
                         description = "",
-                        errorMessage = null
+                        errorMessage = null,
+                        isRoutePointAdded = true
                     )
 
                     val userId = authRepository.getCurrentUserId()
@@ -199,7 +213,8 @@ class RouteViewModel(
                 is AppResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = result.message
+                        errorMessage = result.message,
+                        isRoutePointAdded = false
                     )
                 }
 
@@ -320,17 +335,153 @@ class RouteViewModel(
     }
 
     /**
-     * Удаляет точку маршрута.
+     * Редактирует точку маршрута.
+     *
+     * Пользователь может изменить:
+     * - отображаемое название;
+     * - заметку к месту.
+     */
+    fun updateRoutePoint(
+        tripId: String,
+        pointId: String,
+        title: String,
+        description: String
+    ) {
+        val currentPoint = _uiState.value.routePoints.firstOrNull { point ->
+            point.id == pointId
+        }
+
+        if (currentPoint == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Точка маршрута не найдена"
+            )
+            return
+        }
+
+        if (title.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Введите название точки"
+            )
+            return
+        }
+
+        val updatedPoint = currentPoint.copy(
+            title = title.trim(),
+            description = description.trim()
+        )
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            when (
+                val result = routeRepository.updateRoutePoint(
+                    tripId = tripId,
+                    point = updatedPoint
+                )
+            ) {
+                is AppResult.Success -> {
+                    val updatedPoints = _uiState.value.routePoints.map { point ->
+                        if (point.id == pointId) {
+                            updatedPoint
+                        } else {
+                            point
+                        }
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        routePoints = updatedPoints,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
+        }
+    }
+    /**
+     * Сохраняет новый порядок точек после перетаскивания.
+     *
+     * UI передаёт список точек уже в новом порядке.
+     * ViewModel пересчитывает order: 1, 2, 3...
+     */
+    fun reorderRoutePoints(
+        tripId: String,
+        reorderedPoints: List<RoutePoint>
+    ) {
+        val normalizedPoints = reorderedPoints.mapIndexed { index, point ->
+            point.copy(order = index + 1)
+        }
+
+        saveRouteOrder(
+            tripId = tripId,
+            points = normalizedPoints
+        )
+    }
+
+    /**
+     * Удаляет точку маршрута и пересчитывает порядок оставшихся точек.
+     *
+     * Это нужно, чтобы после удаления второй точки не было:
+     * 1, 3, 4
+     *
+     * А было:
+     * 1, 2, 3
      */
     fun deleteRoutePoint(
         tripId: String,
         pointId: String
     ) {
         viewModelScope.launch {
-            routeRepository.deleteRoutePoint(
-                tripId = tripId,
-                pointId = pointId
-            )
+            val currentPoints = _uiState.value.routePoints
+                .sortedBy { point ->
+                    point.order
+                }
+
+            val remainingPoints = currentPoints
+                .filter { point ->
+                    point.id != pointId
+                }
+                .mapIndexed { index, point ->
+                    point.copy(order = index + 1)
+                }
+
+            when (
+                val deleteResult = routeRepository.deleteRoutePoint(
+                    tripId = tripId,
+                    pointId = pointId
+                )
+            ) {
+                is AppResult.Success -> {
+                    routeRepository.updateRoutePointsOrder(
+                        tripId = tripId,
+                        points = remainingPoints
+                    )
+
+                    _uiState.value = _uiState.value.copy(
+                        routePoints = remainingPoints,
+                        errorMessage = null
+                    )
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = deleteResult.message
+                    )
+                }
+
+                AppResult.Loading -> Unit
+            }
         }
     }
 
@@ -339,5 +490,14 @@ class RouteViewModel(
             "dd.MM.yyyy HH:mm",
             Locale.getDefault()
         ).format(Date())
+    }
+
+    /**
+     * Сбрасывает одноразовый флаг успешного добавления точки маршрута.
+     */
+    fun consumeRoutePointAddedEvent() {
+        _uiState.value = _uiState.value.copy(
+            isRoutePointAdded = false
+        )
     }
 }

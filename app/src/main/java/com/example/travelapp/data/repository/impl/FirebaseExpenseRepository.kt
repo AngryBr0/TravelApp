@@ -3,6 +3,7 @@ package com.example.travelapp.data.repository.impl
 import com.example.travelapp.core.AppResult
 import com.example.travelapp.data.model.Expense
 import com.example.travelapp.data.model.ExpenseCategory
+import com.example.travelapp.data.model.ExpenseOwnerType
 import com.example.travelapp.data.repository.ExpenseRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -11,33 +12,27 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * FirebaseExpenseRepository — реальная реализация ExpenseRepository через Firestore.
+ * FirebaseExpenseRepository — реализация ExpenseRepository через Firestore.
  *
- * Этот класс отвечает за расходы конкретной поездки.
- *
- * Структура хранения:
+ * Расходы хранятся здесь:
  *
  * trips/
  *   tripId/
  *     expenses/
  *       expenseId/
- *         id
- *         tripId
- *         title
- *         category
- *         amount
- *         userId
- *         date
  *
- * ViewModel работает только через интерфейс ExpenseRepository,
- * поэтому экрану не важно, где именно хранятся данные.
+ * Бюджет поездки хранится прямо в документе поездки:
+ *
+ * trips/
+ *   tripId/
+ *     budgetLimit
  */
 class FirebaseExpenseRepository(
     private val firestore: FirebaseFirestore
 ) : ExpenseRepository {
 
     /**
-     * Возвращает ссылку на подколлекцию expenses конкретной поездки.
+     * Ссылка на подколлекцию расходов конкретной поездки.
      */
     private fun expensesCollection(tripId: String) =
         firestore
@@ -68,18 +63,23 @@ class FirebaseExpenseRepository(
                 tripId = tripId
             )
 
-            /**
-             * enum ExpenseCategory сохраняем как строку через .name.
-             * Так проще читать и восстанавливать категорию обратно.
-             */
             val expenseMap = mapOf(
                 "id" to expenseWithId.id,
                 "tripId" to expenseWithId.tripId,
-                "title" to expenseWithId.title,
+                "title" to expenseWithId.title.trim(),
                 "category" to expenseWithId.category.name,
                 "amount" to expenseWithId.amount,
                 "userId" to expenseWithId.userId,
-                "date" to expenseWithId.date
+                "date" to expenseWithId.date,
+
+                /**
+                 * Новые поля:
+                 * COMMON — общий расход поездки.
+                 * PERSONAL — личный расход конкретного участника.
+                 */
+                "ownerType" to expenseWithId.ownerType.name,
+                "ownerUserId" to expenseWithId.ownerUserId,
+                "ownerEmail" to expenseWithId.ownerEmail
             )
 
             document.set(expenseMap).await()
@@ -94,9 +94,6 @@ class FirebaseExpenseRepository(
 
     /**
      * Подписывается на список расходов конкретной поездки.
-     *
-     * addSnapshotListener обновляет экран автоматически,
-     * когда в Firestore добавляется или удаляется расход.
      */
     override fun observeExpenses(
         tripId: String
@@ -127,12 +124,51 @@ class FirebaseExpenseRepository(
                 trySend(AppResult.Success(expenses))
             }
 
-        /**
-         * Когда Flow больше не используется,
-         * удаляем Firebase listener.
-         */
         awaitClose {
             listener.remove()
+        }
+    }
+
+    /**
+     * Обновляет существующий расход.
+     */
+    override suspend fun updateExpense(
+        tripId: String,
+        expense: Expense
+    ): AppResult<Unit> {
+        return try {
+            if (tripId.isBlank()) {
+                return AppResult.Error("Не указан id поездки")
+            }
+
+            if (expense.id.isBlank()) {
+                return AppResult.Error("Расход не найден")
+            }
+
+            if (expense.amount <= 0.0) {
+                return AppResult.Error("Введите корректную сумму")
+            }
+
+            expensesCollection(tripId)
+                .document(expense.id)
+                .update(
+                    mapOf(
+                        "title" to expense.title.trim(),
+                        "category" to expense.category.name,
+                        "amount" to expense.amount,
+                        "date" to expense.date,
+                        "ownerType" to expense.ownerType.name,
+                        "ownerUserId" to expense.ownerUserId,
+                        "ownerEmail" to expense.ownerEmail
+                    )
+                )
+                .await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка обновления расхода"
+            )
         }
     }
 
@@ -162,26 +198,104 @@ class FirebaseExpenseRepository(
     }
 
     /**
+     * Подписывается на бюджет поездки.
+     *
+     * budgetLimit хранится в документе trips/{tripId}.
+     */
+    override fun observeBudgetLimit(
+        tripId: String
+    ): Flow<AppResult<Double>> = callbackFlow {
+        trySend(AppResult.Loading)
+
+        val listener = firestore
+            .collection("trips")
+            .document(tripId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(
+                        AppResult.Error(
+                            error.message ?: "Ошибка загрузки бюджета поездки"
+                        )
+                    )
+                    return@addSnapshotListener
+                }
+
+                val budgetLimit = snapshot
+                    ?.getDouble("budgetLimit")
+                    ?: 0.0
+
+                trySend(AppResult.Success(budgetLimit))
+            }
+
+        awaitClose {
+            listener.remove()
+        }
+    }
+
+    /**
+     * Сохраняет общий бюджет поездки.
+     */
+    override suspend fun updateBudgetLimit(
+        tripId: String,
+        budgetLimit: Double
+    ): AppResult<Unit> {
+        return try {
+            if (tripId.isBlank()) {
+                return AppResult.Error("Не указан id поездки")
+            }
+
+            if (budgetLimit < 0.0) {
+                return AppResult.Error("Бюджет не может быть отрицательным")
+            }
+
+            firestore
+                .collection("trips")
+                .document(tripId)
+                .update("budgetLimit", budgetLimit)
+                .await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка сохранения бюджета поездки"
+            )
+        }
+    }
+
+    /**
      * Преобразует документ Firestore в объект Expense.
+     *
+     * Важно:
+     * title теперь может быть пустым, потому что описание расхода необязательное.
      */
     private fun com.google.firebase.firestore.DocumentSnapshot.toExpenseOrNull(): Expense? {
         val id = getString("id") ?: this.id
-        val title = getString("title") ?: return null
 
-        val categoryText = getString("category") ?: ExpenseCategory.OTHER.name
+        val categoryText = getString("category")
+            ?: ExpenseCategory.OTHER.name
 
         val category = runCatching {
             ExpenseCategory.valueOf(categoryText)
         }.getOrDefault(ExpenseCategory.OTHER)
 
+        val ownerTypeText = getString("ownerType")
+            ?: ExpenseOwnerType.COMMON.name
+
+        val ownerType = runCatching {
+            ExpenseOwnerType.valueOf(ownerTypeText)
+        }.getOrDefault(ExpenseOwnerType.COMMON)
+
         return Expense(
             id = id,
             tripId = getString("tripId").orEmpty(),
-            title = title,
+            title = getString("title").orEmpty(),
             category = category,
             amount = getDouble("amount") ?: 0.0,
             userId = getString("userId").orEmpty(),
-            date = getString("date").orEmpty()
+            date = getString("date").orEmpty(),
+            ownerType = ownerType,
+            ownerUserId = getString("ownerUserId").orEmpty(),
+            ownerEmail = getString("ownerEmail").orEmpty()
         )
     }
 }

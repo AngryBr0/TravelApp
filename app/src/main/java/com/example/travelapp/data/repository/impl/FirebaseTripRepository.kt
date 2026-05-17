@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.CollectionReference
+import com.example.travelapp.data.model.ParticipantRole
+import com.example.travelapp.data.model.ParticipantStatus
+
 /**
  * FirebaseTripRepository — реальная реализация TripRepository через Firestore.
  *
@@ -93,12 +96,39 @@ class FirebaseTripRepository(
              * Это нужно, чтобы во вкладке "Участники" был виден
              * не только приглашенный пользователь, но и сам организатор.
              */
+            /**
+             * Берём данные организатора из коллекции users.
+             *
+             * Это нужно, чтобы в участниках и в личных расходах
+             * показывалось имя пользователя, а не пустая строка.
+             */
+            val ownerDocument = firestore
+                .collection("users")
+                .document(tripWithId.ownerId)
+                .get()
+                .await()
+
+            val organizerEmail = ownerDocument
+                .getString("email")
+                .orEmpty()
+
+            val organizerName = ownerDocument
+                .getString("name")
+                .orEmpty()
+                .ifBlank {
+                    organizerEmail.substringBefore("@")
+                }
+                .ifBlank {
+                    "Организатор"
+                }
+
             val organizerParticipant = mapOf(
                 "id" to tripWithId.ownerId,
                 "tripId" to tripWithId.id,
-                "email" to "",
-                "role" to "ORGANIZER",
-                "status" to "ACCEPTED"
+                "email" to organizerEmail,
+                "name" to organizerName,
+                "role" to ParticipantRole.ORGANIZER.name,
+                "status" to ParticipantStatus.ACCEPTED.name
             )
 
             document

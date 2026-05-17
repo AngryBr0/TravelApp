@@ -92,4 +92,6 @@ dependencies {
     implementation("com.yandex.android:maps.mobile:4.36.0-full")
 
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
 }

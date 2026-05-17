@@ -102,6 +102,7 @@ class FirebaseParticipantRepository(
                 "id" to participantWithId.id,
                 "tripId" to participantWithId.tripId,
                 "email" to participantWithId.email,
+                "name" to participantWithId.name,
                 "role" to participantWithId.role.name,
                 "status" to participantWithId.status.name
             )
@@ -182,6 +183,7 @@ class FirebaseParticipantRepository(
             id = id,
             tripId = getString("tripId").orEmpty(),
             email = email,
+            name = getString("name").orEmpty(),
             role = role,
             status = status
         )

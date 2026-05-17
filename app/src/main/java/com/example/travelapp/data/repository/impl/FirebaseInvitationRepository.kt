@@ -130,6 +130,15 @@ class FirebaseInvitationRepository(
                 .collection("trips")
                 .document(invitation.tripId)
 
+            /**
+             * Важно:
+             * document(invitation.inviteeEmail) оставляем специально.
+             *
+             * Когда пользователь был приглашён, он уже был записан
+             * в participants по email со статусом INVITED.
+             * При принятии приглашения мы перезаписываем эту же запись,
+             * меняя статус на ACCEPTED и добавляя userId + name.
+             */
             val participantDocument = tripDocument
                 .collection("participants")
                 .document(invitation.inviteeEmail)
@@ -137,18 +146,42 @@ class FirebaseInvitationRepository(
             val invitationDocument = invitationsCollection
                 .document(invitation.id)
 
+            /**
+             * Загружаем данные пользователя из users/{userId},
+             * чтобы сохранить имя участника.
+             */
+            val userDocument = firestore
+                .collection("users")
+                .document(userId)
+                .get()
+                .await()
+
+            val userEmail = userDocument
+                .getString("email")
+                .orEmpty()
+                .ifBlank {
+                    invitation.inviteeEmail
+                }
+
+            val userName = userDocument
+                .getString("name")
+                .orEmpty()
+                .ifBlank {
+                    userEmail.substringBefore("@")
+                }
+                .ifBlank {
+                    "Участник"
+                }
+
             val participantMap = mapOf(
                 "id" to userId,
                 "tripId" to invitation.tripId,
-                "email" to invitation.inviteeEmail,
+                "email" to userEmail,
+                "name" to userName,
                 "role" to invitation.role.name,
                 "status" to ParticipantStatus.ACCEPTED.name
             )
 
-            /**
-             * batch нужен, чтобы выполнить несколько операций одним набором:
-             * обновить поездку, участника и приглашение.
-             */
             val batch = firestore.batch()
 
             batch.update(
@@ -177,7 +210,6 @@ class FirebaseInvitationRepository(
             )
         }
     }
-
     /**
      * Отклоняет приглашение.
      */

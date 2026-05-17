@@ -448,16 +448,19 @@ fun AppNavigation() {
                 onAddSelectedPlaceClick = {
                     routeViewModel.addSelectedPlaceToRoute(tripId)
                 },
-                onMoveRoutePointUpClick = { pointId ->
-                    routeViewModel.movePointUp(
+                onRoutePointAddedHandled = routeViewModel::consumeRoutePointAddedEvent,
+                onEditRoutePointClick = { pointId, title, description ->
+                    routeViewModel.updateRoutePoint(
                         tripId = tripId,
-                        pointId = pointId
+                        pointId = pointId,
+                        title = title,
+                        description = description
                     )
                 },
-                onMoveRoutePointDownClick = { pointId ->
-                    routeViewModel.movePointDown(
+                onReorderRoutePoints = { reorderedPoints ->
+                    routeViewModel.reorderRoutePoints(
                         tripId = tripId,
-                        pointId = pointId
+                        reorderedPoints = reorderedPoints
                     )
                 },
                 onDeleteRoutePointClick = { pointId ->
@@ -471,10 +474,31 @@ fun AppNavigation() {
                 onBudgetTitleChange = budgetViewModel::updateTitle,
                 onBudgetCategoryChange = budgetViewModel::updateCategory,
                 onBudgetAmountChange = budgetViewModel::updateAmount,
+                onBudgetExpenseDateChange = budgetViewModel::updateExpenseDate,
+                onBudgetOwnerTypeChange = budgetViewModel::updateOwnerType,
+                onBudgetOwnerUserChange = budgetViewModel::updateOwnerUser,
+                onBudgetSortTypeChange = budgetViewModel::updateSortType,
+                onBudgetLimitInputChange = budgetViewModel::updateBudgetLimitInput,
+                onSaveBudgetLimitClick = {
+                    budgetViewModel.saveBudgetLimit(tripId)
+                },
                 onAddExpenseClick = {
                     budgetViewModel.addExpense(tripId)
                 },
                 onExpenseAddedHandled = budgetViewModel::consumeExpenseAddedEvent,
+                onUpdateExpenseClick = { expenseId, description, category, amount, date, ownerType, ownerUserId, ownerEmail ->
+                    budgetViewModel.updateExpense(
+                        tripId = tripId,
+                        expenseId = expenseId,
+                        description = description,
+                        category = category,
+                        amountText = amount,
+                        date = date,
+                        ownerType = ownerType,
+                        ownerUserId = ownerUserId,
+                        ownerEmail = ownerEmail
+                    )
+                },
                 onDeleteExpenseClick = { expenseId ->
                     budgetViewModel.deleteExpense(
                         tripId = tripId,

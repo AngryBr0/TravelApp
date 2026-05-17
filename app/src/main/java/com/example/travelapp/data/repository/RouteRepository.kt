@@ -37,6 +37,16 @@ interface RouteRepository {
     ): AppResult<Unit>
 
     /**
+     * Обновить точку маршрута.
+     *
+     * Используется для редактирования названия и заметки.
+     */
+    suspend fun updateRoutePoint(
+        tripId: String,
+        point: RoutePoint
+    ): AppResult<Unit>
+
+    /**
      * Удалить точку маршрута.
      */
     suspend fun deleteRoutePoint(

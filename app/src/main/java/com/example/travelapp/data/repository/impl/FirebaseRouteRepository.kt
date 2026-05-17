@@ -195,6 +195,40 @@ class FirebaseRouteRepository(
             )
         }
     }
+
+    /**
+     * Обновляет данные точки маршрута.
+     *
+     * Координаты и адрес не трогаем, потому что они получены из поиска Яндекса.
+     * Пользователь редактирует только название и заметку.
+     */
+    override suspend fun updateRoutePoint(
+        tripId: String,
+        point: RoutePoint
+    ): AppResult<Unit> {
+        return try {
+            if (point.title.isBlank()) {
+                return AppResult.Error("Введите название точки")
+            }
+
+            routePointsCollection(tripId)
+                .document(point.id)
+                .update(
+                    mapOf(
+                        "title" to point.title.trim(),
+                        "description" to point.description.trim()
+                    )
+                )
+                .await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка обновления точки маршрута"
+            )
+        }
+    }
+
     /**
      * Удаляет точку маршрута из Firestore.
      */
