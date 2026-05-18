@@ -19,7 +19,8 @@ import com.example.travelapp.ui.components.AppErrorMessage
 import com.example.travelapp.ui.components.TripHomeCard
 import com.example.travelapp.ui.components.TripsHomeScaffold
 import com.example.travelapp.ui.theme.TravelAppTheme
-
+import java.text.SimpleDateFormat
+import java.util.Locale
 /**
  * TripsScreen — главный экран после входа.
  *
@@ -69,20 +70,47 @@ fun TripsScreen(
                 }
 
                 else -> {
-                    val activeTrips = uiState.trips.filter { trip ->
-                        trip.status != TripStatus.COMPLETED
+                    val tripsWithDisplayStatus = uiState.trips.map { trip ->
+                        trip.copy(
+                            status = calculateTripDisplayStatus(trip)
+                        )
                     }
 
-                    val completedTrips = uiState.trips.filter { trip ->
+                    val planningTrips = tripsWithDisplayStatus.filter { trip ->
+                        trip.status == TripStatus.PLANNING
+                    }
+
+                    val activeTrips = tripsWithDisplayStatus.filter { trip ->
+                        trip.status == TripStatus.ACTIVE
+                    }
+
+                    val completedTrips = tripsWithDisplayStatus.filter { trip ->
                         trip.status == TripStatus.COMPLETED
                     }
 
+
+
                     if (activeTrips.isNotEmpty()) {
                         item {
-                            SectionHeader(text = "Активные")
+                            SectionHeader(text = "В процессе")
                         }
 
                         items(activeTrips) { trip ->
+                            TripHomeCard(
+                                trip = trip,
+                                onClick = {
+                                    onTripClick(trip)
+                                }
+                            )
+                        }
+                    }
+
+                    if (planningTrips.isNotEmpty()) {
+                        item {
+                            SectionHeader(text = "Запланированные")
+                        }
+
+                        items(planningTrips) { trip ->
                             TripHomeCard(
                                 trip = trip,
                                 onClick = {
@@ -106,6 +134,8 @@ fun TripsScreen(
                             )
                         }
                     }
+
+
                 }
             }
         }
@@ -121,6 +151,59 @@ private fun SectionHeader(
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold
     )
+}
+
+/**
+ * Вычисляет актуальный статус поездки по датам.
+ */
+private fun calculateTripDisplayStatus(
+    trip: Trip
+): TripStatus {
+
+    val start = parseTripDate(trip.startDate)
+    val end = parseTripDate(trip.endDate)
+
+    if (start == null || end == null) {
+        return trip.status
+    }
+
+    val todayText = SimpleDateFormat(
+        "dd.MM.yyyy",
+        Locale.getDefault()
+    ).format(System.currentTimeMillis())
+
+    val today = parseTripDate(todayText) ?: return trip.status
+
+    return when {
+        today.before(start) -> TripStatus.PLANNING
+        today.after(end) -> TripStatus.COMPLETED
+        else -> TripStatus.ACTIVE
+    }
+}
+
+private fun parseTripDate(
+    value: String
+): java.util.Date? {
+    val patterns = listOf(
+        "dd.MM.yyyy",
+        "yyyy-MM-dd"
+    )
+
+    patterns.forEach { pattern ->
+        try {
+            val formatter = SimpleDateFormat(
+                pattern,
+                Locale.getDefault()
+            )
+
+            formatter.isLenient = false
+
+            return formatter.parse(value)
+        } catch (_: Exception) {
+        }
+    }
+
+    return null
 }
 
 @Preview(showBackground = true)

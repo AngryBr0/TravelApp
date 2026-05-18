@@ -59,15 +59,38 @@ class AuthViewModel(
      * Это нужно, потому что вход может быть долгой операцией.
      */
     fun signIn() {
+        val state = _uiState.value
+
+        if (state.email.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите email"
+            )
+            return
+        }
+
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(state.email.trim()).matches()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите корректный email"
+            )
+            return
+        }
+
+        if (state.password.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите пароль"
+            )
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
+            _uiState.value = state.copy(
                 isLoading = true,
                 errorMessage = null
             )
 
             val result = authRepository.signIn(
-                email = _uiState.value.email,
-                password = _uiState.value.password
+                email = state.email.trim(),
+                password = state.password
             )
 
             when (result) {
@@ -89,29 +112,64 @@ class AuthViewModel(
             }
         }
     }
-
     /**
      * Регистрация пользователя.
      */
     fun signUp() {
+        val state = _uiState.value
+
+        if (state.name.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите имя"
+            )
+            return
+        }
+
+        if (state.email.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите email"
+            )
+            return
+        }
+
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(state.email.trim()).matches()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите корректный email"
+            )
+            return
+        }
+
+        if (state.password.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Введите пароль"
+            )
+            return
+        }
+
+        if (state.password.length < 6) {
+            _uiState.value = state.copy(
+                errorMessage = "Пароль должен содержать минимум 6 символов"
+            )
+            return
+        }
+
+        if (state.password != state.confirmPassword) {
+            _uiState.value = state.copy(
+                errorMessage = "Пароли не совпадают"
+            )
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
+            _uiState.value = state.copy(
                 isLoading = true,
                 errorMessage = null
             )
 
-            if (_uiState.value.password != _uiState.value.confirmPassword) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Пароли не совпадают"
-                )
-                return@launch
-            }
-
             val result = authRepository.signUp(
-                email = _uiState.value.email,
-                password = _uiState.value.password,
-                name = _uiState.value.name
+                email = state.email.trim(),
+                password = state.password,
+                name = state.name.trim()
             )
 
             when (result) {

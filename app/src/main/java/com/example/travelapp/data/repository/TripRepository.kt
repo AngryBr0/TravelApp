@@ -3,6 +3,7 @@ package com.example.travelapp.data.repository
 import com.example.travelapp.core.AppResult
 import com.example.travelapp.data.model.Trip
 import kotlinx.coroutines.flow.Flow
+import com.example.travelapp.data.model.TripStatus
 
 /**
  * TripRepository — интерфейс для работы с поездками.
@@ -36,6 +37,11 @@ interface TripRepository {
      * Наблюдает за одной конкретной поездкой по ее id.
      */
     fun observeTripById(tripId: String): Flow<AppResult<Trip>>
+
+    suspend fun updateTrip(
+        trip: Trip
+    ): AppResult<Unit>
+
 
     /**
      * Удаляет поездку.

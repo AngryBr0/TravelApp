@@ -38,6 +38,8 @@ import com.example.travelapp.presentation.invitations.InvitationsScreen
 import com.example.travelapp.presentation.invitations.InvitationsViewModel
 import com.example.travelapp.presentation.trip.TripViewModel
 import com.example.travelapp.data.repository.impl.YandexPlaceSearchRepository
+import com.example.travelapp.data.model.TripStatus
+
 /**
  * AppNavigation описывает навигацию между экранами приложения.
  *
@@ -435,6 +437,8 @@ fun AppNavigation() {
                 tripTitle = tripUiState.trip?.title.orEmpty(),
                 tripStartDate = tripUiState.trip?.startDate.orEmpty(),
                 tripEndDate = tripUiState.trip?.endDate.orEmpty(),
+                tripDescription = tripUiState.trip?.description.orEmpty(),
+                tripStatus = tripUiState.trip?.status ?: TripStatus.PLANNING,
                 isDeletingTrip = tripUiState.isDeleting,
                 tripErrorMessage = tripUiState.errorMessage,
                 canDeleteTrip = participantsUiState.canInviteParticipants,
@@ -526,6 +530,19 @@ fun AppNavigation() {
                         role = role
                     )
                 },
+                onOptimizeRouteClick = {
+                    routeViewModel.optimizeSelectedDayRoute(tripId)
+                },
+                onUpdateTripClick = { title, description, startDate, endDate ->
+                    tripViewModel.updateTrip(
+                        tripId = tripId,
+                        title = title,
+                        description = description,
+                        startDate = startDate,
+                        endDate = endDate
+                    )
+                },
+
                 onDeleteParticipantClick = { participantId, participantEmail ->
                     participantsViewModel.deleteParticipant(
                         tripId = tripId,

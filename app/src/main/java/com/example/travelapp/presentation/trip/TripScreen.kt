@@ -40,13 +40,26 @@ import com.example.travelapp.presentation.route.RouteUiState
 import com.example.travelapp.ui.components.AppScaffold
 import com.example.travelapp.ui.theme.TravelAppTheme
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.Alignment
 import com.example.travelapp.data.model.RoutePoint
 import com.example.travelapp.data.model.ExpenseOwnerType
 import com.example.travelapp.presentation.budget.ExpenseSortType
+import com.example.travelapp.data.model.TripStatus
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.travelapp.ui.components.AppDangerButton
+import com.example.travelapp.ui.components.AppDateField
+import com.example.travelapp.ui.components.AppErrorMessage
+import com.example.travelapp.ui.components.AppSectionTitle
+import com.example.travelapp.ui.components.AppTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 /**
  * TripScreen — экран конкретной поездки.
@@ -54,12 +67,14 @@ import com.example.travelapp.presentation.budget.ExpenseSortType
  * Здесь убран старый TabRow.
  * Вместо него используется более современный горизонтальный переключатель вкладок.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripScreen(
     tripId: String,
     onBackClick: () -> Unit,
-
     tripTitle: String,
+    tripDescription: String,
+    onUpdateTripClick: (String, String, String, String) -> Unit,
     tripStartDate: String,
     tripEndDate: String,
     isDeletingTrip: Boolean,
@@ -76,6 +91,7 @@ fun TripScreen(
     onRoutePointAddedHandled: () -> Unit,
     onEditRoutePointClick: (String, String, String) -> Unit,
     onReorderRoutePoints: (List<RoutePoint>) -> Unit,
+    onOptimizeRouteClick: () -> Unit,
     onRouteSelectedDayChange: (Int) -> Unit,
     onDeleteRoutePointClick: (String) -> Unit,
 
@@ -100,10 +116,18 @@ fun TripScreen(
     onInviteParticipantClick: () -> Unit,
     onUpdateParticipantRoleClick: (String, ParticipantRole) -> Unit,
     onDeleteParticipantClick: (String, String) -> Unit,
+    tripStatus: TripStatus,
 ) {
     val selectedTabIndex = remember { mutableIntStateOf(0) }
     val showDeleteDialog = remember { mutableStateOf(false) }
-    val showActionsMenu = remember { mutableStateOf(false) }
+    var isTripManagementSheetVisible by remember {
+        mutableStateOf(false)
+    }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
 
     val tabs = listOf(
         "Маршрут",
@@ -117,40 +141,16 @@ fun TripScreen(
         onBackClick = onBackClick,
         actions = {
             if (canDeleteTrip) {
-                Box(
-                    contentAlignment = Alignment.TopEnd
+                IconButton(
+                    onClick = {
+                        isTripManagementSheetVisible = true
+                    },
+                    enabled = !isDeletingTrip
                 ) {
-                    IconButton(
-                        onClick = {
-                            showActionsMenu.value = true
-                        },
-                        enabled = !isDeletingTrip
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "Действия с поездкой"
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showActionsMenu.value,
-                        onDismissRequest = {
-                            showActionsMenu.value = false
-                        }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = "Удалить поездку",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            },
-                            onClick = {
-                                showActionsMenu.value = false
-                                showDeleteDialog.value = true
-                            }
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Управление поездкой"
+                    )
                 }
             }
         }
@@ -188,6 +188,7 @@ fun TripScreen(
                     onRoutePointAddedHandled = onRoutePointAddedHandled,
                     onEditPointClick = onEditRoutePointClick,
                     onReorderPoints = onReorderRoutePoints,
+                    onOptimizeRouteClick = onOptimizeRouteClick,
                     onDeletePointClick = onDeleteRoutePointClick
                 )
 
@@ -272,8 +273,159 @@ fun TripScreen(
             }
         )
     }
-}
+    if (isTripManagementSheetVisible) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                isTripManagementSheetVisible = false
+            },
+            sheetState = sheetState
+        ) {
+            TripManagementSheetContent(
+                title = tripTitle,
+                description = tripDescription,
+                startDate = tripStartDate,
+                endDate = tripEndDate,
+                isLoading = isDeletingTrip,
+                errorMessage = tripErrorMessage,
+                canDeleteTrip = canDeleteTrip,
+                onSaveClick = { title, description, startDate, endDate ->
+                    onUpdateTripClick(
+                        title,
+                        description,
+                        startDate,
+                        endDate
+                    )
 
+                    isTripManagementSheetVisible = false
+                },
+                onDeleteTripClick = {
+                    isTripManagementSheetVisible = false
+                    showDeleteDialog.value = true
+                }
+            )
+        }
+    }
+}
+@Composable
+private fun TripManagementSheetContent(
+    title: String,
+    description: String,
+    startDate: String,
+    endDate: String,
+    isLoading: Boolean,
+    errorMessage: String?,
+    canDeleteTrip: Boolean,
+    onSaveClick: (String, String, String, String) -> Unit,
+    onDeleteTripClick: () -> Unit
+) {
+    var editableTitle by remember(title) {
+        mutableStateOf(title)
+    }
+
+    var editableDescription by remember(description) {
+        mutableStateOf(description)
+    }
+
+    var editableStartDate by remember(startDate) {
+        mutableStateOf(startDate)
+    }
+
+    var editableEndDate by remember(endDate) {
+        mutableStateOf(endDate)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(
+                start = 18.dp,
+                end = 18.dp,
+                bottom = 24.dp
+            ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AppSectionTitle(text = "Управление поездкой")
+
+        AppTextField(
+            value = editableTitle,
+            onValueChange = {
+                editableTitle = it
+            },
+            label = "Название",
+            placeholder = "Название поездки"
+        )
+
+        AppTextField(
+            value = editableDescription,
+            onValueChange = {
+                editableDescription = it
+            },
+            label = "Описание",
+            placeholder = "Описание поездки",
+            singleLine = false,
+            maxLines = 3
+        )
+
+        AppDateField(
+            value = editableStartDate,
+            onDateSelected = {
+                editableStartDate = it
+            },
+            label = "Дата начала",
+            placeholder = "Выберите дату начала"
+        )
+
+        AppDateField(
+            value = editableEndDate,
+            onDateSelected = {
+                editableEndDate = it
+            },
+            label = "Дата окончания",
+            placeholder = "Выберите дату окончания"
+        )
+
+        AppErrorMessage(message = errorMessage)
+
+        Button(
+            onClick = {
+                onSaveClick(
+                    editableTitle,
+                    editableDescription,
+                    editableStartDate,
+                    editableEndDate
+                )
+            },
+            enabled = !isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2563EB),
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "Сохранить изменения",
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (canDeleteTrip) {
+            AppDangerButton(
+                text = "Удалить поездку",
+                onClick = onDeleteTripClick,
+                enabled = !isLoading
+            )
+        }
+
+        if (isLoading) {
+            CircularProgressIndicator()
+        }
+    }
+}
 
 /**
  * Новый переключатель вкладок.
@@ -389,6 +541,9 @@ private fun TripScreenPreview() {
             tripId = "trip-1",
             onBackClick = {},
             tripTitle = "Питер",
+            tripDescription = "Поездка на несколько дней",
+            tripStatus = TripStatus.PLANNING,
+            onUpdateTripClick = { _, _, _, _ -> },
             tripStartDate = "12.05.2026",
             tripEndDate = "15.05.2026",
             onRouteSelectedDayChange = {},
@@ -429,6 +584,7 @@ private fun TripScreenPreview() {
             onEditRoutePointClick = { _, _, _ -> },
             onRoutePointAddedHandled = {},
             onUpdateParticipantRoleClick = { _, _ -> },
+            onOptimizeRouteClick = {},
             onDeleteParticipantClick = { _, _ -> }
         )
     }

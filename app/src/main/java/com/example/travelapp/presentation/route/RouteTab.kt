@@ -64,6 +64,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.travelapp.ui.components.AppBottomActionButton
 import com.example.travelapp.ui.components.AppDangerButton
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.filled.MoreVert
 
 /**
  * RouteTab — вкладка маршрута.
@@ -89,9 +90,14 @@ fun RouteTab(
     onRoutePointAddedHandled: () -> Unit,
     onEditPointClick: (String, String, String) -> Unit,
     onReorderPoints: (List<RoutePoint>) -> Unit,
+    onOptimizeRouteClick: () -> Unit,
     onDeletePointClick: (String) -> Unit
 ) {
     val isAddPlaceSheetVisible = remember { mutableStateOf(false) }
+
+    val isRouteActionsSheetVisible = remember {
+        mutableStateOf(false)
+    }
 
     var editingPoint by remember {
         mutableStateOf<RoutePoint?>(null)
@@ -157,9 +163,42 @@ fun RouteTab(
                 )
             }
 
-            AppSectionTitle(text = "Маршрут")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppSectionTitle(
+                    text = "Маршрут"
+                )
 
-            if (localPoints.isEmpty()) {
+                Box(
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (canEdit && localPoints.size >= 3) {
+                    IconButton(
+                        onClick = {
+                            isRouteActionsSheetVisible.value = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Действия с маршрутом"
+                        )
+                    }
+                }
+            }
+
+            if (uiState.isLoading && localPoints.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (localPoints.isEmpty()) {
                 AppEmptyState(
                     text = if (canEdit) {
                         "Пока точки маршрута не добавлены. Нажмите “Добавить место”, чтобы начать маршрут."
@@ -168,8 +207,6 @@ fun RouteTab(
                     }
                 )
             } else {
-
-
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
@@ -253,6 +290,22 @@ fun RouteTab(
                 onPlaceClick = onPlaceClick,
                 onDescriptionChange = onDescriptionChange,
                 onAddSelectedPlaceClick = onAddSelectedPlaceClick
+            )
+        }
+    }
+    if (isRouteActionsSheetVisible.value) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                isRouteActionsSheetVisible.value = false
+            },
+            sheetState = sheetState
+        ) {
+            RouteActionsSheetContent(
+                pointsCount = localPoints.size,
+                onOptimizeClick = {
+                    onOptimizeRouteClick()
+                    isRouteActionsSheetVisible.value = false
+                }
             )
         }
     }
@@ -586,6 +639,56 @@ private fun EditRoutePointSheetContent(
 }
 
 /**
+ * Bottom sheet с действиями для маршрута выбранной даты.
+ */
+@Composable
+private fun RouteActionsSheetContent(
+    pointsCount: Int,
+    onOptimizeClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 18.dp,
+                end = 18.dp,
+                bottom = 24.dp
+            ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AppSectionTitle(text = "Действия с маршрутом")
+
+        AppMutedText(
+            text = "Оптимизация переставит точки выбранной даты так, чтобы линии между ними были короче."
+        )
+
+        Button(
+            onClick = onOptimizeClick,
+            enabled = pointsCount >= 3,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2563EB),
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "Оптимизировать порядок",
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (pointsCount < 3) {
+            AppMutedText(
+                text = "Для оптимизации нужно минимум 3 точки."
+            )
+        }
+    }
+}
+
+/**
  * Результат поиска места.
  */
 @Composable
@@ -892,6 +995,7 @@ private fun RouteTabPreview() {
             tripStartDate = "12.05.2026",
             onSelectedDayChange = {},
             onReorderPoints = {},
+            onOptimizeRouteClick = {},
             onDeletePointClick = {}
         )
     }
@@ -919,6 +1023,7 @@ private fun RouteTabEmptyPreview() {
             daysCount = 3,
             tripStartDate = "12.05.2026",
             onSelectedDayChange = {},
+            onOptimizeRouteClick = {},
             onDeletePointClick = {}
         )
     }

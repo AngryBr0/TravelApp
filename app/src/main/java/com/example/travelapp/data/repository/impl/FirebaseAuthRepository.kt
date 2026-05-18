@@ -7,7 +7,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 /**
  * FirebaseAuthRepository — реальная реализация AuthRepository через Firebase.
  *
@@ -59,7 +64,7 @@ class FirebaseAuthRepository(
             AppResult.Success(user)
         } catch (exception: Exception) {
             AppResult.Error(
-                exception.message ?: "Ошибка входа"
+                getLoginErrorMessage(exception)
             )
         }
     }
@@ -115,7 +120,7 @@ class FirebaseAuthRepository(
             AppResult.Success(user)
         } catch (exception: Exception) {
             AppResult.Error(
-                exception.message ?: "Ошибка регистрации"
+                getRegisterErrorMessage(exception)
             )
         }
     }
@@ -210,5 +215,106 @@ class FirebaseAuthRepository(
             email = firebaseUser.email.orEmpty(),
             name = firebaseUser.displayName.orEmpty()
         )
+    }
+
+    private fun getLoginErrorMessage(
+        exception: Exception
+    ): String {
+        return when (exception) {
+            is FirebaseAuthInvalidCredentialsException -> {
+                "Неверный email или пароль"
+            }
+
+            is FirebaseAuthInvalidUserException -> {
+                "Пользователь с таким email не найден"
+            }
+
+            is FirebaseNetworkException -> {
+                "Проблема с подключением к интернету"
+            }
+
+            is FirebaseAuthException -> {
+                when (exception.errorCode) {
+                    "ERROR_INVALID_EMAIL" -> {
+                        "Введите корректный email"
+                    }
+
+                    "ERROR_WRONG_PASSWORD",
+                    "ERROR_INVALID_CREDENTIAL" -> {
+                        "Неверный email или пароль"
+                    }
+
+                    "ERROR_USER_NOT_FOUND" -> {
+                        "Пользователь с таким email не найден"
+                    }
+
+                    "ERROR_USER_DISABLED" -> {
+                        "Аккаунт пользователя отключён"
+                    }
+
+                    "ERROR_TOO_MANY_REQUESTS" -> {
+                        "Слишком много попыток входа. Попробуйте позже"
+                    }
+
+                    else -> {
+                        "Не удалось войти в аккаунт"
+                    }
+                }
+            }
+
+            else -> {
+                "Не удалось войти в аккаунт"
+            }
+        }
+    }
+
+    private fun getRegisterErrorMessage(
+        exception: Exception
+    ): String {
+        return when (exception) {
+            is FirebaseAuthWeakPasswordException -> {
+                "Пароль слишком слабый. Используйте минимум 6 символов"
+            }
+
+            is FirebaseAuthInvalidCredentialsException -> {
+                "Введите корректный email"
+            }
+
+            is FirebaseAuthUserCollisionException -> {
+                "Пользователь с таким email уже зарегистрирован"
+            }
+
+            is FirebaseNetworkException -> {
+                "Проблема с подключением к интернету"
+            }
+
+            is FirebaseAuthException -> {
+                when (exception.errorCode) {
+                    "ERROR_INVALID_EMAIL" -> {
+                        "Введите корректный email"
+                    }
+
+                    "ERROR_EMAIL_ALREADY_IN_USE" -> {
+                        "Пользователь с таким email уже зарегистрирован"
+                    }
+
+                    "ERROR_WEAK_PASSWORD" -> {
+                        "Пароль слишком слабый. Используйте минимум 6 символов"
+                    }
+
+                    "ERROR_TOO_MANY_REQUESTS" -> {
+                        "Слишком много попыток. Попробуйте позже"
+                    }
+
+                    else -> {
+                        "Не удалось создать аккаунт"
+                    }
+                }
+            }
+
+            else -> {
+                "Не удалось создать аккаунт"
+            }
+        }
     }
 }

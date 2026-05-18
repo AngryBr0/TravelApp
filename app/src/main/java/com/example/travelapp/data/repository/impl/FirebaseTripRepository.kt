@@ -221,6 +221,40 @@ class FirebaseTripRepository(
         }
     }
 
+    override suspend fun updateTrip(
+        trip: Trip
+    ): AppResult<Unit> {
+        return try {
+            if (trip.id.isBlank()) {
+                return AppResult.Error("Не указан id поездки")
+            }
+
+            if (trip.title.isBlank()) {
+                return AppResult.Error("Введите название поездки")
+            }
+
+            firestore
+                .collection("trips")
+                .document(trip.id)
+                .update(
+                    mapOf(
+                        "title" to trip.title.trim(),
+                        "description" to trip.description.trim(),
+                        "startDate" to trip.startDate,
+                        "endDate" to trip.endDate,
+                        "status" to trip.status.name
+                    )
+                )
+                .await()
+
+            AppResult.Success(Unit)
+        } catch (exception: Exception) {
+            AppResult.Error(
+                exception.message ?: "Ошибка обновления поездки"
+            )
+        }
+    }
+
     /**
      * Удаляет поездку из Firestore.
      *
@@ -293,11 +327,18 @@ class FirebaseTripRepository(
             description = getString("description").orEmpty(),
             startDate = getString("startDate").orEmpty(),
             endDate = getString("endDate").orEmpty(),
-            status = status,
+            status = try {
+                TripStatus.valueOf(
+                    getString("status") ?: TripStatus.PLANNING.name
+                )
+            } catch (exception: Exception) {
+                TripStatus.PLANNING
+            },
             ownerId = getString("ownerId").orEmpty(),
             participants = participants
                 ?.filterIsInstance<String>()
-                ?: emptyList()
+                ?: emptyList(),
+
         )
     }
     /**

@@ -395,6 +395,68 @@ class RouteViewModel(
     }
 
     /**
+     * Автоматически оптимизирует порядок точек выбранного дня.
+     *
+     * До 8 точек ищем самый короткий порядок полным перебором.
+     * Если точек больше 8 — используем быстрый алгоритм ближайшего соседа.
+     *
+     * Оптимизация считается по прямому расстоянию между координатами,
+     * а не по дорогам.
+     */
+    fun optimizeSelectedDayRoute(
+        tripId: String
+    ) {
+        val state = _uiState.value
+        val selectedDayNumber = state.selectedDayNumber
+
+        val selectedDayPoints = state.routePoints
+            .filter { point ->
+                point.dayNumber == selectedDayNumber
+            }
+            .sortedBy { point ->
+                point.order
+            }
+
+        if (selectedDayPoints.size < 3) {
+            _uiState.value = state.copy(
+                errorMessage = "Для оптимизации нужно минимум 3 точки"
+            )
+            return
+        }
+
+        val optimizedDayPoints = if (selectedDayPoints.size <= 8) {
+            buildShortestRouteByStraightLines(selectedDayPoints)
+        } else {
+            buildNearestNeighborRoute(selectedDayPoints)
+        }
+
+        val normalizedDayPoints = optimizedDayPoints.mapIndexed { index, point ->
+            point.copy(
+                order = index + 1,
+                dayNumber = selectedDayNumber
+            )
+        }
+
+        val otherDayPoints = state.routePoints.filter { point ->
+            point.dayNumber != selectedDayNumber
+        }
+
+        val finalPoints = (otherDayPoints + normalizedDayPoints)
+            .sortedWith(
+                compareBy<RoutePoint> { point ->
+                    point.dayNumber
+                }.thenBy { point ->
+                    point.order
+                }
+            )
+
+        saveRouteOrder(
+            tripId = tripId,
+            points = finalPoints
+        )
+    }
+
+    /**
      * Удаляет точку маршрута и пересчитывает порядок только внутри её дня.
      */
     fun deleteRoutePoint(
@@ -468,6 +530,148 @@ class RouteViewModel(
                 AppResult.Loading -> Unit
             }
         }
+    }
+
+    /**
+     * Ищет самый короткий порядок точек полным перебором.
+     *
+     * Используется только для небольшого количества точек,
+     * потому что количество вариантов быстро растёт.
+     */
+    private fun buildShortestRouteByStraightLines(
+        points: List<RoutePoint>
+    ): List<RoutePoint> {
+        var bestRoute = points
+        var bestDistance = Double.MAX_VALUE
+
+        fun search(
+            currentRoute: MutableList<RoutePoint>,
+            remainingPoints: MutableList<RoutePoint>
+        ) {
+            if (remainingPoints.isEmpty()) {
+                val distance = calculateTotalDistance(currentRoute)
+
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    bestRoute = currentRoute.toList()
+                }
+
+                return
+            }
+
+            for (index in remainingPoints.indices.reversed()) {
+                val point = remainingPoints.removeAt(index)
+                currentRoute.add(point)
+
+                search(
+                    currentRoute = currentRoute,
+                    remainingPoints = remainingPoints
+                )
+
+                currentRoute.removeAt(currentRoute.lastIndex)
+                remainingPoints.add(index, point)
+            }
+        }
+
+        search(
+            currentRoute = mutableListOf(),
+            remainingPoints = points.toMutableList()
+        )
+
+        return bestRoute
+    }
+
+    /**
+     * Быстрая оптимизация: каждый раз выбирается ближайшая следующая точка.
+     *
+     * Используется, если точек много.
+     */
+    private fun buildNearestNeighborRoute(
+        points: List<RoutePoint>
+    ): List<RoutePoint> {
+        var bestRoute = points
+        var bestDistance = Double.MAX_VALUE
+
+        points.forEach { startPoint ->
+            val remainingPoints = points.toMutableList()
+            val route = mutableListOf<RoutePoint>()
+
+            route.add(startPoint)
+            remainingPoints.remove(startPoint)
+
+            while (remainingPoints.isNotEmpty()) {
+                val lastPoint = route.last()
+
+                val nearestPoint = remainingPoints.minBy { point ->
+                    calculateDistanceMeters(
+                        first = lastPoint,
+                        second = point
+                    )
+                }
+
+                route.add(nearestPoint)
+                remainingPoints.remove(nearestPoint)
+            }
+
+            val distance = calculateTotalDistance(route)
+
+            if (distance < bestDistance) {
+                bestDistance = distance
+                bestRoute = route
+            }
+        }
+
+        return bestRoute
+    }
+
+    /**
+     * Считает общую длину маршрута по прямым линиям между точками.
+     */
+    private fun calculateTotalDistance(
+        points: List<RoutePoint>
+    ): Double {
+        if (points.size < 2) {
+            return 0.0
+        }
+
+        return points
+            .zipWithNext()
+            .sumOf { pair ->
+                calculateDistanceMeters(
+                    first = pair.first,
+                    second = pair.second
+                )
+            }
+    }
+
+    /**
+     * Расстояние между двумя координатами по формуле гаверсинуса.
+     */
+    private fun calculateDistanceMeters(
+        first: RoutePoint,
+        second: RoutePoint
+    ): Double {
+        val earthRadiusMeters = 6_371_000.0
+
+        val firstLatitude = Math.toRadians(first.latitude)
+        val secondLatitude = Math.toRadians(second.latitude)
+
+        val latitudeDelta = Math.toRadians(second.latitude - first.latitude)
+        val longitudeDelta = Math.toRadians(second.longitude - first.longitude)
+
+        val a = kotlin.math.sin(latitudeDelta / 2) *
+                kotlin.math.sin(latitudeDelta / 2) +
+                kotlin.math.cos(firstLatitude) *
+                kotlin.math.cos(secondLatitude) *
+                kotlin.math.sin(longitudeDelta / 2) *
+                kotlin.math.sin(longitudeDelta / 2)
+
+        val c = 2 * kotlin.math.atan2(
+            kotlin.math.sqrt(a),
+            kotlin.math.sqrt(1 - a)
+        )
+
+        return earthRadiusMeters * c
     }
 
     private fun getCurrentDateTime(): String {

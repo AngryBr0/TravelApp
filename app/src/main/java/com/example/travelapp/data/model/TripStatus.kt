@@ -1,27 +1,17 @@
 package com.example.travelapp.data.model
 
 /**
- * TripStatus — статус поездки.
+ * TripStatus — состояние поездки.
  *
- * enum class используется, когда значение может быть только
- * из заранее заданного списка.
- *
- * Это лучше, чем хранить статус обычной строкой,
- * потому что меньше риск опечаток.
+ * PLANNING — поездка запланирована.
+ * ACTIVE — поездка сейчас идёт.
+ * COMPLETED — поездка завершена.
+ * CANCELLED — поездка отменена.
  */
-enum class TripStatus {
-    /**
-     * Поездка находится на этапе планирования.
-     */
-    PLANNING,
-
-    /**
-     * Поездка уже идет.
-     */
-    ACTIVE,
-
-    /**
-     * Поездка завершена.
-     */
-    COMPLETED
+enum class TripStatus(
+    val displayName: String
+) {
+    PLANNING("Запланирована"),
+    ACTIVE("В процессе"),
+    COMPLETED("Завершена")
 }
