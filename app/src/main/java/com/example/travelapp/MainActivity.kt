@@ -7,7 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.travelapp.ui.theme.TravelAppTheme
 import com.example.travelapp.presentation.navigation.AppNavigation
-
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 /**
  * MainActivity — главная Activity приложения.
@@ -24,6 +24,8 @@ class MainActivity : ComponentActivity() {
      * который уже есть в базовом классе ComponentActivity.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         // Включает современный режим отображения приложения "от края до края"

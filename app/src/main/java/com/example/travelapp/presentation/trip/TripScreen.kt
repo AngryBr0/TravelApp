@@ -150,17 +150,11 @@ fun TripScreen(
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = "Управление поездкой"
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
+                    ) } } }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-
+                .padding(paddingValues)) {
             TripTabs(
                 tabs = tabs,
                 selectedIndex = selectedTabIndex.intValue,
@@ -222,7 +216,6 @@ fun TripScreen(
                     onUpdateExpenseClick = onUpdateExpenseClick,
                     onDeleteExpenseClick = onDeleteExpenseClick
                 )
-
                 3 -> ParticipantsTab(
                     tripId = tripId,
                     uiState = participantsUiState,

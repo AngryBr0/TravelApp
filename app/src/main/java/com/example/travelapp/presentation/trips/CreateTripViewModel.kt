@@ -111,7 +111,6 @@ class CreateTripViewModel(
                         errorMessage = result.message
                     )
                 }
-
                 AppResult.Loading -> Unit
             }
         }

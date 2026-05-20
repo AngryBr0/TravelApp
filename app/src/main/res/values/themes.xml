@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.TravelApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.TravelApp.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_app_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.TravelApp</item>
+    </style>
 </resources>
+

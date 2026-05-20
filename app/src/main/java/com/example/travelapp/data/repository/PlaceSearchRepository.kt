@@ -10,15 +10,6 @@ import com.example.travelapp.data.model.PlaceSearchResult
  * Она работает с абстракцией.
  */
 interface PlaceSearchRepository {
-
-    /**
-     * Выполняет поиск мест по текстовому запросу.
-     *
-     * Например:
-     * "Эрмитаж"
-     * "Казанский собор"
-     * "Красная площадь"
-     */
     suspend fun searchPlaces(
         query: String
     ): AppResult<List<PlaceSearchResult>>

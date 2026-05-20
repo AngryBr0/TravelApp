@@ -42,7 +42,6 @@ interface TripRepository {
         trip: Trip
     ): AppResult<Unit>
 
-
     /**
      * Удаляет поездку.
      */

@@ -52,7 +52,6 @@ import com.example.travelapp.data.model.TripStatus
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
     fun navigateRoot(route: String) {
         navController.navigate(route) {
             popUpTo(Screen.Trips.route) {
@@ -62,51 +61,29 @@ fun AppNavigation() {
             restoreState = true
         }
     }
-    /**
-     * remember нужен, чтобы репозитории не создавались заново
-     * при каждой перерисовке интерфейса.
-     */
-
-    val authRepository = remember {
-        FirebaseAuthRepository(
+    val authRepository = remember { FirebaseAuthRepository(
             firebaseAuth = FirebaseAuth.getInstance(),
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val tripRepository = remember {
-        FirebaseTripRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val routeRepository = remember {
-        FirebaseRouteRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val expenseRepository = remember {
-        FirebaseExpenseRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val participantRepository = remember {
-        FirebaseParticipantRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val notificationRepository = remember {
-        FirebaseNotificationRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val invitationRepository = remember {
-        FirebaseInvitationRepository(
-            firestore = FirebaseFirestore.getInstance()
-        )
-    }
-    val placeSearchRepository = remember {
-        YandexPlaceSearchRepository()
-    }
+            firestore = FirebaseFirestore.getInstance()) }
 
+    val tripRepository = remember { FirebaseTripRepository(
+            firestore = FirebaseFirestore.getInstance()) }
+
+    val routeRepository = remember {
+        FirebaseRouteRepository(firestore = FirebaseFirestore.getInstance()) }
+
+    val expenseRepository = remember { FirebaseExpenseRepository(
+        firestore = FirebaseFirestore.getInstance()) }
+
+    val participantRepository = remember { FirebaseParticipantRepository(
+        firestore = FirebaseFirestore.getInstance()) }
+
+    val notificationRepository = remember { FirebaseNotificationRepository(
+            firestore = FirebaseFirestore.getInstance())}
+
+    val invitationRepository = remember { FirebaseInvitationRepository(
+            firestore = FirebaseFirestore.getInstance()) }
+
+    val placeSearchRepository = remember { YandexPlaceSearchRepository() }
         NavHost(
         navController = navController,
         startDestination = Screen.Login.route
@@ -120,9 +97,7 @@ fun AppNavigation() {
                     )
                 }
             )
-
             val uiState by invitationsViewModel.uiState.collectAsState()
-
             /**
              * Загружаем входящие приглашения при открытии экрана.
              */
@@ -353,11 +328,7 @@ fun AppNavigation() {
 
         composable(Screen.TripDetails.route) { backStackEntry ->
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
-
-            /**
-             * ViewModel маршрута.
-             */
-            val routeViewModel: RouteViewModel = viewModel(
+            val routeViewModel: RouteViewModel = viewModel(    /*** ViewModel маршрута.*/
                 factory = ViewModelFactory {
                     RouteViewModel(
                         routeRepository = routeRepository,
@@ -367,20 +338,14 @@ fun AppNavigation() {
                     )
                 }
             )
-
             val routeUiState by routeViewModel.uiState.collectAsState()
-
-            val tripViewModel: TripViewModel = viewModel(
+            val tripViewModel: TripViewModel = viewModel(  /** ViewModel поездки. */
                 factory = ViewModelFactory {
                     TripViewModel(tripRepository)
                 }
             )
-
             val tripUiState by tripViewModel.uiState.collectAsState()
-            /**
-             * ViewModel бюджета.
-             */
-            val budgetViewModel: BudgetViewModel = viewModel(
+            val budgetViewModel: BudgetViewModel = viewModel(   /** ViewModel бюджета. */
                 factory = ViewModelFactory {
                     BudgetViewModel(
                         authRepository = authRepository,
@@ -389,13 +354,8 @@ fun AppNavigation() {
                     )
                 }
             )
-
             val budgetUiState by budgetViewModel.uiState.collectAsState()
-
-            /**
-             * ViewModel участников.
-             */
-            val participantsViewModel: ParticipantsViewModel = viewModel(
+            val participantsViewModel: ParticipantsViewModel = viewModel(  /**ViewModel участников. */
                 factory = ViewModelFactory {
                     ParticipantsViewModel(
                         participantRepository = participantRepository,
@@ -405,7 +365,6 @@ fun AppNavigation() {
                     )
                 }
             )
-
             val participantsUiState by participantsViewModel.uiState.collectAsState()
 
             /**
